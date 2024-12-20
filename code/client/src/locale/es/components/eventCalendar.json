@@ -1,0 +1,39 @@
+###< if (data.basicData.languages.find(lang => lang=='es')) { >###
+###< if (feature.MWM_VisitSchedule) { >###
+{
+  "event_calendar": {
+    "eventCalendar": "Calendario de Visitas",
+    "client": "Cliente",
+    "close": "Cerrar",
+    "clustered_event": {
+      "title": "{date}: {count} visitas"
+    },
+    "day": "Día",
+    "description": "Descripción",
+    "employee": {
+      "plural": "Empleados",
+      "singular": "Empleado",
+      "mandatory": "Se debe filtrar por empleado al existir demasiadas visitas planificadas"
+    },
+    "month": "Mes",
+    "order": "Orden",
+    "searchVisits": "Buscar visitas",
+    "state": "Estado",
+    "title": {
+      "week": {
+        "format": "{day} {month} {year}"
+      },
+      "day": {
+        "format": "{weekDay} \n {day} de {month}"
+      }
+    },
+    "to_day_view": "Acceder al día",
+    "today": "Hoy",
+    "week": "Semana",
+    "weekdays": [1, 2, 3, 4, 5, 6, 0],
+    "weekdays_name": ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
+  }
+}
+
+###< } >###
+###< } >###

@@ -1,0 +1,44 @@
+###< if (data.basicData.languages.find(lang => lang=='gl') && feature.SensorViewer) { >###
+{
+  "map-views": {
+    "debug": {
+      "notification": {
+        "text1": "TR: {time} ms",
+        "text2": "CD: {count}",
+        "tooltip": "<b>TR</b>: Tempo de Resposta. <b>CD</b>: Cantidade de Datos"
+      }
+    },
+    "loading": "Cargando",
+    "popup": {
+      ###< if (feature.SV_P_SensorInfo) { >###
+      "measurements": "Medidas",
+      "info": "Info",
+      ###< } >###
+      "table": {
+        "property": "Propiedade",
+        "value": "Valor",
+        "no-data": "Sen datos"
+      }
+    },
+    "no-data-dialog": {
+      "title": "Non se atoparon datos!",
+      "content": "Non hai datos dispoñibles. Cambie algún filtro e ténteo de novo.",
+      "actions": {
+        "close": "Pechar"
+      }
+    },
+    "real-time-label": "Tempo real",
+    "no-more-data-notify": "Non hai máis datos.",
+    "legend": {
+      "title": "Lenda",
+      "udOcupacion": "%",
+      "no-data": "Sen datos",
+      "tooltip": {
+        "static": "Estática: Mínimo e máximo histórico",
+        "dynamic": "Dinámica: Mínimo e máximo dos datos mostrados",
+        "custom": "Personalizada: Intervalos a escoller"
+      }
+    }
+  }
+}
+###< } >###

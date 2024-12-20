@@ -1,0 +1,35 @@
+###<@ return data.basicData.languages
+    .filter(function(lang) { return lang !== "es" && lang !== "gl"; })
+    .map(function(lang) {
+      return {
+        fileName: lang + '/components/gallery.json',
+        context: lang
+      };
+    });
+>###
+###< if (checkAnyEntityContainsGalleryProperties(data)) { >###
+{
+  "gallery": {
+    "add": "Add",
+    "delete": "Delete",
+    "empty": "The gallery is empty",
+    "name": "Gallery",
+    "image_detail": {
+      "creationDate": "Creation date",
+      "description": "Description"
+    },
+    "image_form": {
+      "author": "Author",
+      "description": "Description",
+      "file": "File",
+      "form": "Gallery Form",
+      "required": "A file is mandatory",
+      "title": "Title",
+      "year": "Year"
+    },
+    "image-to-delete": "Image ready to be removed",
+    "update": "Update",
+    "undo": "Undo"
+  }
+}
+###< } >###

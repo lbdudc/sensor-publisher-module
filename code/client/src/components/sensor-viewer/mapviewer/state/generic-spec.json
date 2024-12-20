@@ -1,0 +1,117 @@
+###< if (feature.SensorViewer) { >###
+###<
+  const dimensions = [];
+  data.dataWarehouse.sensors.forEach(function(sensor) {
+    const dims = sensor.dimensions;
+    dims
+      .filter(dim => dim.type === "CATEGORICAL")
+      .forEach(dim => {
+        dimensions.push(dim);
+      });
+  });
+  var hasCategoricalDims = dimensions.length > 0;
+>###
+[
+  {
+    "id": "SPATIAL_AGGREGATION",
+    "label": "aggregation.label",
+    "triggerCallback": true,
+    "setItemsOnMounted": true,
+    "actions": ["SPATIAL_FILTER_TYPE"]
+  },
+  {
+    "id": "TEMPORAL_AGGREGATION",
+    "label": "aggregation.label",
+    "setItemsOnMounted": true,
+    "actions": ["YEAR_FILTER"]
+  },
+  {
+    "id": "OPERATIONAL_AGGREGATION",
+    "label": "aggregation.operational.label",
+    "triggerCallback": true,
+    "setItemsOnMounted": true
+  },
+  {
+    "id": "PROPERTY_AGGREGATION",
+    "label": "aggregation.property.label",
+    "setItemsOnMounted": true,
+    "triggerCallback": true
+  },
+  {
+    "id": "SPATIAL_FILTER_TYPE",
+    "label": "filter.territorial-unit",
+    "actions": ["SPATIAL_FILTER"]
+  },
+  {
+    "id": "SPATIAL_FILTER",
+    "label": "aggregation.spatial.items",
+    "triggerCallback": true,
+    "actions": []
+  },
+  ###< if (hasCategoricalDims) { >###
+  {
+    "id": "CATEGORY_AGGREGATION",
+    "label": "filter.category",
+    "setItemsOnMounted": true,
+    "actions": ["CATEGORY_FILTER"]
+  },
+  {
+    "id": "CATEGORY_FILTER",
+    "label": "filter.value",
+    "setItemsOnMounted": true,
+    "triggerCallback":true
+  },
+  ###< } >###
+  {
+    "id": "YEAR_FILTER",
+    "label": "filter.year",
+    "actions": ["DATE_FILTER"]
+  },
+  {
+    "id": "DATE_FILTER",
+    "label": "filter.date",
+    "actions": ["PAGE_FILTER", "INSTANT_SELECTOR"]
+  },
+  {
+    "id": "PAGE_FILTER",
+    "actions": ["INSTANT_FILTER"]
+  },
+  {
+    "id": "INSTANT_FILTER",
+    "triggerCallback": true,
+    ###< if (hasCategoricalDims) { >###
+    "actions": ["CATEGORY_FILTER"]
+    ###< } else { >###
+    "actions": []
+    ###< } >###
+  },
+  {
+    "id": "INSTANT_SELECTOR",
+    "triggerCallback": true,
+    "label": "filter.instant",
+    "actions": []
+  },
+  {
+    "id": "SHOW_SENSORS",
+    "triggerCallback": true,
+    "setItemsOnMounted": true,
+    "actions": []
+  },
+  {
+    "id": "REAL_TIME_FLAG"
+  },
+  {
+    "id": "LEGEND_TYPE",
+    "setItemsOnMounted": true,
+    "actions": []
+  },
+  {
+    "id": "MIN",
+    "actions": []
+  },
+  {
+    "id": "MAX",
+    "actions": []
+  }
+]
+###< } >###

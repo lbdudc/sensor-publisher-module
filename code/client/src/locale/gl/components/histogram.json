@@ -1,0 +1,13 @@
+###< if (data.basicData.languages.find(lang => lang=='gl') && feature.SensorViewer) { >###
+{
+  "histogram": {
+    "label": "Histograma",
+    "selector-label": {
+      "from": "Dende",
+      "to": "Ata",
+      "category": "Categoría",
+      "operación": "Operación"
+    }
+  }
+}
+###< } >###

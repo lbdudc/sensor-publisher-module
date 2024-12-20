@@ -1,0 +1,9 @@
+###< if (feature.SensorViewer) { >###
+{
+  ###< data.dataWarehouse.sensors.forEach(function(sensor, index) { >###
+    ###< sensor.measureData.forEach(function(prop, sensorIndex) { >###
+    "###<= prop.name >###": "###<= prop.units >###" ###< if (sensorIndex < sensor.measureData.length - 1) { >###,###< } >###
+    ###< }); if (index < data.dataWarehouse.sensors.length - 1) { >###,###< } >###
+  ###< }); >###
+}
+###< } >###

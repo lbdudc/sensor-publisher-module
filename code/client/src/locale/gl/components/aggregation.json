@@ -1,0 +1,85 @@
+###< if (data.basicData.languages.find(lang => lang=='gl') && feature.SensorViewer) { >###
+{
+  "aggregation": {
+    "label": "Agregación",
+    "spatial": {
+      "label": "Espacial",
+      "items": {
+      ###< const entities = []; >###
+        ###< data?.dataWarehouse?.sensors.forEach(function(sensor) { >###
+          ###< sensor.dimensions.forEach(function(dimension, dimensionIndex) { >###
+            ###< dimension.entities?.forEach(function(entity, index) { >###
+              ###< entities.push(entity); >###
+            ###< }); >###
+          ###< }); >###
+        ###< }); >###
+
+        ###< entities.flat().forEach(function(entity, index) { >###
+          "###<= normalize(entity.toLowerCase(), true) >###": "###<= normalize(entity.toLowerCase(), true) >###" ###< if (entities.length > index + 1) { >###,###< } >###
+      ###< }); >###
+      }
+    },
+    "temporal": {
+      "label": "Temporal",
+      "items": {
+        "hourly": "Horaria",
+        "daily": "Diaria",
+        "monthly": "Mensual",
+        "weekly": "Semanal",
+        "yearly": "Anual",
+        "no_grouping": "Sen agrupación"
+      }
+    },
+    "operational": {
+      "label": "Operacional",
+      "items": {
+        "sum": "Suma",
+        "avg": "Media",
+        "max": "Máximo",
+        "min": "Mínimo"
+      }
+    },
+    "property": {
+      "label": "Propiedade",
+      "items": {
+        "year": "Ano",
+        ###< const dimensions = []; >###
+        ###< data?.dataWarehouse?.sensors.forEach(function(sensor) { >###
+          ###< sensor.measureData.forEach(function(measure, index) { >###
+            "###<= measure.name.toLowerCase() >###": "###<= normalize(measure.name.toLowerCase(), true) >###" ###< if (sensor.measureData.length >= index + 1) { >###,###< } >###
+            ###< if(measure.units != null && measure.units.length>0 ){ >### "###<= measure.units >###": "###<= measure.units >###" ###< if (sensor.measureData.length >= index + 1) { >###,###< } >### ###< } >###
+          ###< }); >###
+          ###< sensor.dimensions.forEach(function(dimension) { >###
+            ###< dimension.entities?.forEach(function(entity) { >###
+              ###< dimensions.push(entity); >###
+            ###< }); >###
+          ###< }); >###
+        ###< }); >###
+
+        ###< dimensions.forEach(function(dimension, index) { >###
+          "###<= normalize(dimension.toLowerCase(), true) >###": "###<= normalize(dimension.toLowerCase(), true) >###" ###< if (dimensions.length > index + 1) { >###,###< } >###
+        ###< }); >###
+      }
+    },
+    "category": {
+      "items": {
+        ###< const categories = []; >###
+        ###< data?.dataWarehouse?.sensors.forEach(function(sensor) { >###
+          ###< sensor.dimensions.filter(dim => dim.type === "CATEGORICAL").forEach(function(dimension) { >###
+             ###< categories.push(dimension.field); >###
+           ###< }); >###
+        ###< }); >###
+
+        ###< categories.forEach(function(category, index) { >###
+          "###<= category.toLowerCase() >###": "###<= normalize(category.toLowerCase(), true) >###" ###< if (categories.length > index + 1) { >###,###< } >###
+        ###< }); >###
+      }
+    },
+    "legend": {
+      "static": "Lenda estática",
+      "dynamic": "Lenda dinámica",
+      "custom": "Lenda personalizada"
+    }
+  }
+}
+###< } >###

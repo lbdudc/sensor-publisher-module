@@ -1,0 +1,182 @@
+###< if (feature.SensorViewer) { >###
+{
+  "specs": [
+    ###< const getTemporalIntervals = function(time) {
+        const intervalRel = [
+        {
+            label: 'YEAR',
+            text: 'aggregation.temporal.items.yearly',
+            value: 31536000
+        },
+        {
+            label: 'MONTH',
+            text: 'aggregation.temporal.items.monthly',
+            value: 2592000
+        },
+        {
+            label: 'WEEK',
+            text: 'aggregation.temporal.items.weekly',
+            value: 604800
+        },
+        {
+            label: 'DAY',
+            text: 'aggregation.temporal.items.daily',
+            value: 86400
+        },
+        {
+            label: 'HOUR',
+            text: 'aggregation.temporal.items.hourly',
+            value: 3600
+        },
+        {
+            label: 'MINUTE',
+            text: 'aggregation.temporal.items.minutely',
+            value: 60
+        },
+        {
+            label: 'SECOND',
+            text: 'aggregation.temporal.items.secondly',
+            value: 1
+        },
+        {
+            label: 'NONE',
+            text: 'aggregation.temporal.items.no_grouping',
+            value: 3153600000
+        },
+      ];
+
+        return intervalRel.filter(function(interval) {
+          return interval.value >= time;
+      });
+    }; >###
+
+    ###< if (feature.SensorViewer) { >###
+    ###<
+    const dimensions = [];
+    data.dataWarehouse.sensors.forEach(function(sensor) {
+      const dims = sensor.dimensions;
+      dims
+        .filter(dim => dim.type === "CATEGORICAL")
+        .forEach(dim => {
+          dimensions.push(dim);
+        });
+    }); >###
+    ###< var hasCategoricalDims = dimensions.length > 0; >###
+    ###< data.dataWarehouse.sensors.forEach(function(sensor, index) { >###
+    ###<    const intervals = getTemporalIntervals(sensor.time); >###
+    {
+          "id": "###<= sensor.id >###",
+          "name": "###<= sensor.id >###",
+          "isMoving": ###<= sensor.isMoving >###,
+          "repository": "###<= sensor.id >###EntityRepository",
+          "repository_url": "###<= camelToSnakeCase(normalize(sensor.id)) >###",
+          "store": {
+            "spatial": [
+          ###< sensor.dimensions.filter(function(dim) { return dim.type == 'SPATIAL'
+              }).forEach(function(dim, index) { >###
+          ###< const entities = dim.entities;  >###
+          ###< dim.entities.map(function(entity, entIndex) {  >###
+          {
+                    "label": "###<= entity >###",
+                    "value": "###<= entity >###"
+                  } ###< if (entIndex < entities.length - 1) { >###,###< } >###
+          ###<
+                }); >###
+          ###< if (index < sensor.dimensions.length - 1) { >###,###< } >###
+          ###<
+              }); >###
+            ],
+            "temporal": [
+          ###< intervals.map(function(interval, intervalIndex) { >###
+          {
+                  "label": "###<= interval.text >###",
+                  "value": "###<= interval.label >###"
+                } ###< if (intervalIndex < intervals.length - 1) { >###,###< } >###
+          ###<
+              }); >###
+            ],
+            "operational": [
+              {
+                "label": "aggregation.operational.items.avg",
+                "value": "AVERAGE"
+              },
+              {
+                "label": "aggregation.operational.items.max",
+                "value": "MAX"
+              },
+              {
+                "label": "aggregation.operational.items.min",
+                "value": "MIN"
+              }
+            ],
+            ###< if (hasCategoricalDims) { >###
+            "category": [
+              ###< sensor.dimensions.filter(function(dim) { return dim.type == 'CATEGORICAL'
+                  }).forEach(function(dim) { >###
+                  {
+                    "label": "aggregation.category.items.###<= normalize(dim.id) >###",
+                    "value": "###<= normalize(dim.field) >###"
+                  ###< if (dim.categories != null) { >###
+                    ,
+                    "categories": [
+                      ###< dim.categories.map(function(category) { >###
+                      {
+                        "label": "###<= category.label >###",
+                        "from": "###<= category.from >###",
+                        "to": "###<= category.to >###"
+                      },
+                      ###< }); >###
+                    ],
+                  ###< } >###
+                  },
+              ###< }); >###
+            ],
+            ###< } >###
+            "legend": [
+              ###< if (feature.SV_L_Static) { >###
+              {
+                  "label": "aggregation.legend.static",
+                  "value": "STATIC"
+                },
+              ###<
+              } >###
+              ###< if (feature.SV_L_Dynamic) { >###
+              {
+                  "label": "aggregation.legend.dynamic",
+                  "value": "DYNAMIC"
+                },
+              ###<
+              } >###
+              ###< if (feature.SV_L_CustomRanges) { >###
+              {
+                  "label": "aggregation.legend.custom",
+                  "value": "CUSTOM"
+                }
+              ###<
+              } >###
+            ],
+            "properties": [
+          ###< sensor.measureData.map(function(property, propIndex) { >###
+          {
+                  "value": "###<= property.name >###",
+                  "label": "###<= property.name >###",
+                  "units": "###<= property.units >###"
+                }
+          ###< if (propIndex < sensor.measureData.length - 1) { >###,###< } >###
+          ###<
+              }); >###
+            ]
+          },
+          "mapInformation": {
+            "defaultMap": "###<= sensor.defaultMap >###",
+            "defaultLayer": "###<= sensor.defaultLayer >###"
+          }
+        }
+    ###< if (index < data.dataWarehouse.sensors.length - 1) { >###,###< } >###
+    ###<
+      }); >###
+    ###<
+    } >###
+  ]
+}
+###< } >###

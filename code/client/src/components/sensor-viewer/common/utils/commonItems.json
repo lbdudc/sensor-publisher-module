@@ -1,0 +1,68 @@
+###< if (feature.SensorViewer) { >###
+{
+  ###< data.dataWarehouse.sensors.forEach(function(sensor, index) { >###
+  "###<= normalize(sensor.id, false) >###SpatialItems": [
+    ###< sensor.dimensions.forEach(function(dim) { >###
+      ###< dim.entities?.forEach(function(entity) { >###
+        {
+          "label": "aggregation.spatial.items.###<= entity.toLowerCase() >###",
+          "value": "###<= entity.toLowerCase() >###"
+        },
+      ###< }); >###
+    ###< }); >###
+  ],
+  ###< }); >###
+  "temporalItems": [
+    {
+      "label": "aggregation.temporal.items.yearly",
+      "value": "YEAR"
+    },
+    {
+      "label": "aggregation.temporal.items.monthly",
+      "value": "MONTH"
+    },
+    {
+      "label": "aggregation.temporal.items.daily",
+      "value": "DAY"
+    },
+    {
+      "label": "aggregation.temporal.items.no_grouping",
+      "value": "NONE"
+    }
+  ],
+  "operationalItems": [
+    {
+      "label": "aggregation.operational.items.avg",
+      "value": "AVERAGE"
+    },
+    {
+      "label": "aggregation.operational.items.max",
+      "value": "MAX"
+    },
+    {
+      "label": "aggregation.operational.items.min",
+      "value": "MIN"
+    }
+  ],
+  "legendTypes": [
+    ###< if (feature.SV_L_Static) { >###
+    {
+      "label": "aggregation.legend.static",
+      "value": "STATIC"
+    },
+    ###< } >###
+    ###< if (feature.SV_L_Dynamic) { >###
+    {
+      "label": "aggregation.legend.dynamic",
+      "value": "DYNAMIC"
+    },
+    ###< } >###
+    ###< if (feature.SV_L_CustomRanges) { >###
+    {
+      "label": "aggregation.legend.custom",
+      "value": "CUSTOM"
+    }
+    ###< } >###
+  ]
+}
+###< } >###

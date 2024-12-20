@@ -1,0 +1,28 @@
+###< if (data.basicData.languages.find(lang => lang=='es')) { >###
+###< if (checkAnyEntityContainsGalleryProperties(data)) { >###
+{
+  "gallery": {
+    "add": "Añadir",
+    "delete": "Eliminar",
+    "empty": "La galería está vacía",
+    "name": "Galería",
+    "image_detail": {
+      "creationDate": "Fecha de creación",
+      "description": "Descripción"
+    },
+    "image_form": {
+      "author": "Autor",
+      "description": "Descripción",
+      "file": "Fichero",
+      "form": "Formulario de galería",
+      "required": "Es obligatorio un fichero",
+      "title": "Título",
+      "year": "Año"
+    },
+    "image-to-delete": "Imagen lista para ser eliminada",
+    "update": "Actualizar",
+    "undo": "Deshacer"
+  }
+}
+###< } >###
+###< } >###

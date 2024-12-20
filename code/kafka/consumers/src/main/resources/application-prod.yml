@@ -1,0 +1,17 @@
+/*% if (feature.SV_D_DataInsertion && feature.SV_D_DI_Consumers) { %*/
+logging:
+  level:
+    root: INFO
+    es.udc.lbd.gema.lps: DEBUG
+    es.udc.lbd.gema.lps.model.util.EnumConverter: ERROR
+properties:
+  gis:
+    defaultSrid: 4326
+kafka:
+  servers: /*%= getDatabaseConfigFromSpec(data, 'host', '127.0.0.1') %*/:9092
+postgres:
+  ipPort: /*%= getDatabaseConfigFromSpec(data, 'host', '127.0.0.1') %*/:/*%= getDatabaseConfigFromSpec(data, 'port', '5432') %*/
+  database: /*%= getDatabaseConfigFromSpec(data, 'database', 'gema') %*/
+  user: /*%= getDatabaseConfigFromSpec(data, 'username', 'postgres') %*/
+  pass: /*%= getDatabaseConfigFromSpec(data, 'password', 'postgres') %*/
+/*% } %*/

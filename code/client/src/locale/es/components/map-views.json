@@ -1,0 +1,43 @@
+###< if (data.basicData.languages.find(lang => lang=='es') && feature.SensorViewer) { >###
+{
+  "map-views": {
+    "debug": {
+      "notification": {
+        "text1": "RT: {time} ms",
+        "text2": "RD: {count}",
+        "tooltip": "<b>RT</b>: Request Time. <b>RD</b>: Request Data"
+      }
+    },
+    "loading": "Loading",
+    "popup": {
+      ###< if (feature.SV_P_SensorInfo) { >###
+      "measurements": "Medidas",
+      "info": "Info",
+      ###< } >###
+      "table": {
+        "property": "Property",
+        "value": "Value",
+        "no-data": "No data"
+      }
+    },
+    "no-data-dialog": {
+      "title": "No data found!",
+      "content": "There is no data available. Change some filter and try it again.",
+      "actions": {
+        "close": "Close"
+      }
+    },
+    "real-time-label": "Real time",
+    "no-more-data-notify": "There is no more data.",
+    "legend": {
+      "title": "Legend",
+      "no-data": "No data",
+      "tooltip": {
+        "static": "Static: Historical minimum and maximum",
+        "dynamic": "Dynamic: Minimun and maxium values for data displayed",
+        "custom": "Custom: The intervals of your choice"
+      }
+    }
+  }
+}
+###< } >###

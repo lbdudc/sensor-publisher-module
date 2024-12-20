@@ -1,0 +1,16 @@
+###<@ return data.basicData.languages
+    .filter(function(lang) { return lang !== "es" && lang !== "gl"; })
+    .map(function(lang) {
+      return {
+        fileName: lang + '/components/measurement-popup.json',
+        context: lang
+      };
+    });
+>###
+###< if (feature.SensorViewer) { >###
+{
+  "measurement_popup": {
+    "title": "Measurements"
+  }
+}
+###< } >###

@@ -1,0 +1,60 @@
+###<@ return data.basicData.languages
+    .filter(function(lang) { return lang !== "es" && lang !== "gl"; })
+    .map(function(lang) {
+      return {
+        fileName: lang + '/components/planned-event-crud.json',
+        context: lang
+      };
+    });
+>###
+###< if (feature.MWM_VisitSchedule) { >###
+{
+  "planned_event_crud": {
+    "actions": "Actions",
+    "address": "Address",
+    "back": "Back",
+    "cancel": "Cancel",
+    "client": "Client",
+    "confirmation": "Are you sure you want to continue?",
+    "continue": "Continue",
+    "deleteVisit": "Delete Visit",
+    "description": "Description",
+    "edit": "Edit",
+    "employee": "Employee",
+    "end": "End",
+    "visitDetail": "Visit Detail",
+    "visitForm": "Visit Form",
+    "visitList": "Visit List",
+    "formErrors": "Please fix errors in the form",
+    "from": "Date from",
+    "label": "Label",
+    "location": "Location",
+    "new": "New",
+    "not_active_item": "[DELETED]",
+    "permanentAction": "This action will be permanent",
+    "remove": "Remove",
+    "save": "Save",
+    "search": "Search",
+    "select_client": "Select client",
+    "select_employee": "Select employee",
+    "sort_events": "Sort events",
+    "start": "Start",
+    "startDateError": "The start date must be earlier than the end date",
+    "state": "State",
+    "state_values": {
+      "DONE": "Done",
+      "PENDING": "Pending"
+    },
+    "to": "Date to",
+    "validation": {
+      "label_required": "Label required",
+      "description_required": "Description required",
+      "state_required": "State required",
+      "client_required": "Client required",
+      "employee_required": "Employee required"
+    },
+    "date": "Date"
+  }
+}
+
+###< } >###

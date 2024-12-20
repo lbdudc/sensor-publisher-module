@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<featureModel chosenLayoutAlgorithm="4">
+  <struct>
+    <and mandatory="true" name="GEMA_SPL">
+      <and disabled="true" mandatory="true" name="DataManagement">
+        <and disabled="true" mandatory="true" name="DM_SpatialDatabase">
+          <feature disabled="true" mandatory="true" name="DM_SD_PostGIS"/>
+        </and>
+        <alt disabled="true" mandatory="true" name="DM_GenerationType">
+          <feature disabled="true" mandatory="true" name="DM_GT_Identity"/>
+          <feature disabled="true" mandatory="true" name="DM_GT_Sequence"/>
+        </alt>
+        <or name="DM_DataInput">
+          <or mandatory="true" name="DM_DI_DataFeeding">
+            <feature mandatory="true" name="DM_DI_DF_CSV"/>
+          </or>
+        </or>
+      </and>
+      <and mandatory="true" name="GraphicalUserInterface">
+        <and name="GUI_Menu">
+          <alt name="GUI_M_Position" mandatory="true">
+            <feature mandatory="true" name="GUI_M_Top"/>
+            <feature mandatory="true" name="GUI_M_Left"/>
+          </alt>
+          <feature name="GUI_M_Custom"/>
+        </and>
+      </and>
+      <and mandatory="true" name="MapViewer">
+        <or mandatory="true" name="MV_MapServer">
+          <feature mandatory="true" name="MV_MS_GeoServer"/>
+          <and mandatory="true" name="MV_MS_GeoJSON">
+            <feature name="MV_MS_GJ_Cached"/>
+            <feature name="MV_MS_GJ_Paginated"/>
+          </and>
+        </or>
+        <alt mandatory="true" name="MV_MapManagement">
+          <and name="MV_MM_MultipleMapViewer">
+            <feature name="MV_MM_MMV_MapSelectorInMapViewer"/>
+            <feature name="MV_MM_MMV_MapSelectorInMenuElement"/>
+          </and>
+        </alt>
+        <feature name="MV_Clustering"/>
+      </and>
+      <and name="SensorViewer">
+        <and name="SV_LayerManager">
+            <feature name="SV_LM_Opacity"/>
+            <feature name="SV_LM_Order"/>
+            <feature name="SV_LM_Visibility"/>
+            <feature name="SV_LM_Center"/>
+            <feature name="SV_LM_ShowWMSStyle"/>
+            <feature name="SV_LM_DownloadLayer"/>
+        </and>
+        <or name="SV_Legend">
+            <feature name="SV_L_Static"/>
+            <feature name="SV_L_Dynamic"/>
+            <feature name="SV_L_CustomRanges"/>
+        </or>
+        <and name="SV_FiltersBox">
+            <feature name="SV_FB_SpatialDimension"/>
+            <feature name="SV_FB_TemporalDimension"/>
+        </and>
+        <and name="SV_TimelineBox">
+            <feature name="SV_TB_RealTime"/>
+        </and>
+        <feature name="SV_Rasters"/>
+        <and name="SV_Popup">
+            <feature name="SV_P_Histogram"/>
+            <feature name="SV_P_SensorInfo"/>
+        </and>
+        <or name="SV_Data">
+          <and name="SV_D_DataInsertion">
+              <feature name="SV_D_DI_Producers"/>
+              <feature name="SV_D_DI_Consumers"/>
+          </and>
+          <or name="SV_D_ArtificialGenerator">
+              <feature name="SV_D_ADG_Entities"/>
+              <feature name="SV_D_ADG_Sensors"/>
+              <feature name="SV_D_ADG_Dimensions"/>
+          </or>
+        </or>
+      </and>
+      <and mandatory="true" name="Tools">
+        <feature hidden="true" name="T_FileUploader"/>
+        <feature hidden="true" name="T_EntitiesInformation"/>
+        <feature hidden="true" mandatory="true" name="T_GIS"/>
+        <feature name="T_Quartz"/>
+      </and>
+      <or name="Deploy">
+        <or name="D_Containers">
+          <feature name="D_C_Postgres"/>
+          <feature name="D_C_Geoserver"/>
+          <feature name="D_C_Nginx"/>
+          <feature name="D_C_Elastic"/>
+          <feature name="D_C_Kibana"/>
+          <feature name="D_C_Kafka"/>
+        </or>
+        <and name="D_GitLabRunner">
+          <feature name="D_GLR_Unique" />
+        </and>
+      </or>
+    </and>
+  </struct>
+  <constraints>
+    <rule>
+      <imp>
+        <var>DM_DI_DataFeeding</var>
+        <var>T_EntitiesInformation</var>
+      </imp>
+    </rule>
+    <rule>
+      <imp>
+        <var>DM_DI_DataFeeding</var>
+        <var>T_FileUploader</var>
+      </imp>
+    </rule>
+    <rule>
+      <imp>
+        <var>D_C_Kibana</var>
+        <var>D_C_Elastic</var>
+      </imp>
+    </rule>
+    <rule>
+      <imp>
+        <var>MV_MS_GJ_Paginated</var>
+        <not>
+          <var>MV_MS_GJ_Cached</var>
+        </not>
+      </imp>
+    </rule>
+    <rule>
+      <imp>
+        <var>MV_MS_GJ_Cached</var>
+        <not>
+          <var>MV_MS_GJ_Paginated</var>
+        </not>
+      </imp>
+    </rule>
+  </constraints>
+  <calculations Auto="true" Constraints="true" Features="true" Redundant="true" Tautology="true"/>
+  <comments/>
+  <featureOrder userDefined="false"/>
+</featureModel>

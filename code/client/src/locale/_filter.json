@@ -1,0 +1,78 @@
+###<@ return data.basicData.languages
+    .filter(function(lang) { return lang !== "es" && lang !== "gl"; })
+    .map(function(lang) {
+      return {
+        fileName: lang + '/components/filter.json',
+        context: lang
+      };
+    });
+>###
+###< if (feature.SensorViewer) { >###
+{
+  "filter": {
+    "label": "Filters",
+    "spatial": "Spatial",
+    "categories": "Categories",
+    "category": "Category",
+    "value": "Value",
+    "territorial-unit": "Territorial unit",
+    "aggregation": "Aggregation",
+    "aggregations": "Aggregations",
+    "temporal": "Temporal",
+    "others": "Othres",
+    "month": "Month",
+    "year": "Year",
+    "sex": "Sex",
+    "age": "Age",
+    "date": "Date",
+    "magnitude": "Magnitude",
+    "instant": "Instant",
+    "rasters": "Rasters",
+    "items": {
+      "2020": "2020",
+      "2021": "2021",
+      "2022": "2022",
+      "JANUARY": "January",
+      "FEBRUARY": "February",
+      "MARCH": "March",
+      "APRIL": "April",
+      "MAY": "May",
+      "JUNE": "June",
+      "JULY": "July",
+      "AUGUST": "August",
+      "SEPTEMBER": "September",
+      "OCTOBER": "October",
+      "NOVEMBER": "November",
+      "DECEMBER": "December"
+    },
+    "debug-log": {
+      "active": "Debug log activated",
+      "inactive": "Debug log deactivated",
+      "log-dialog": {
+        "title": "Last logs",
+        "close": "Close"
+      }
+    },
+    "showSensorsSwitch":{
+      "streets":"Streets",
+      "sensors":"Sensors"
+    }
+  },
+  ###< const dimensions = []; >###
+  ###< data?.dataWarehouse?.sensors.forEach(function(sensor) { >###
+    ###< sensor.measureData.forEach(function(measure, index) { >###
+      "###<= measure.name >###": "###<= normalize(measure.name.toLowerCase(), true) >###" ###< if (sensor.measureData.length >= index + 1) { >###,###< } >###
+      ###< if(measure.units != null && measure.units.length>0 ){ >### "###<= measure.units >###": "###<= measure.units >###" ###< if (sensor.measureData.length >= index + 1) { >###,###< } >### ###< } >###
+    ###< }); >###
+    ###< sensor.dimensions.forEach(function(dimension) { >###
+      ###< dimension.entities?.forEach(function(entity) { >###
+        ###< dimensions.push(entity); >###
+      ###< }); >###
+    ###< }); >###
+  ###< }); >###
+
+  ###< dimensions.forEach(function(dimension, index) { >###
+    "###<= normalize(dimension.toLowerCase(), true) >###": "###<= normalize(dimension.toLowerCase(), true) >###" ###< if (dimensions.length > index + 1) { >###,###< } >###
+  ###< }); >###
+}
+###< } >###

@@ -1,0 +1,22 @@
+/*% if (feature.SV_D_DataInsertion && feature.SV_D_DI_Consumers) { %*/
+spring:
+  main:
+    web-application-type: none
+    web-environment: false
+logging:
+  level:
+    root: INFO
+    es.udc.lbd.gema.lps: DEBUG
+    es.udc.lbd.gema.lps.model.util.EnumConverter: ERROR
+properties:
+  clientHost: http://localhost:1234
+  gis:
+    defaultSrid: 4326
+kafka:
+  servers: 127.0.0.1:9092
+postgres:
+  ipPort: 127.0.0.1:5432
+  database: /*%= getDatabaseConfigFromSpec(data, 'database', 'test') %*/
+  user: postgres
+  pass: postgres
+/*% } %*/

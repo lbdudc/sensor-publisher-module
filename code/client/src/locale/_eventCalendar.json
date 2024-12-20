@@ -1,0 +1,46 @@
+###<@ return data.basicData.languages
+    .filter(function(lang) { return lang !== "es" && lang !== "gl"; })
+    .map(function(lang) {
+      return {
+        fileName: lang + '/components/eventCalendar.json',
+        context: lang
+      };
+    });
+>###
+###< if (feature.MWM_VisitSchedule) { >###
+{
+  "event_calendar": {
+    "eventCalendar": "Visit Schedule",
+    "client": "Client",
+    "close": "Close",
+    "clustered_event": {
+      "title": "{date}: {count} visits"
+    },
+    "day": "Day",
+    "description": "Description",
+    "employee": {
+      "plural": "Employees",
+      "singular": "Employee",
+      "mandatory": "Filter by employee is mandatory since there are too many visits scheduled"
+    },
+    "month": "Month",
+    "order": "Order",
+    "searchVisits": "Search Visits",
+    "state": "State",
+    "title": {
+      "week": {
+        "format": "{month} {day} {year}"
+      },
+      "day": {
+        "format": "{weekDay} \n {day} {month}"
+      }
+    },
+    "to_day_view": "Go to day view",
+    "today": "Today",
+    "week": "Week",
+    "weekdays": [0, 1, 2, 3, 4, 5, 6],
+    "weekdays_name": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thrusday", "Friday", "Saturday"]
+  }
+}
+
+###< } >###

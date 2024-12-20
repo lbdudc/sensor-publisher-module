@@ -1,0 +1,59 @@
+###< if (feature.SensorViewer) { >###
+{
+  "layers": [
+    ###< const geojsonLayers = data.mapViewer.layers.filter(function(layer){ return layer.type == "geojson"});
+        const wmsLayers = data.mapViewer.layers.filter(function(layer){ return layer.type == "wms"});
+        const tileLayers = data.mapViewer.layers.filter(function(layer){ return layer.type == "tilelayer"});
+        geojsonLayers.forEach(function(layer, index) {
+            var entity = data.dataModel.entities.find(function(entity){ return entity.name == normalize(layer.entityName.split("-")[0], true); });
+            var geographicPropertyNames = getEntityPropertyNamesOfGeographicTypes(entity);
+            geographicPropertyNames.forEach(function(geoPropertyName, indexPropertyNames) {
+    >###
+    {
+      "layerType": "geojson",
+      "name": "###<= layer.name >###",
+      "entityName": "###<= layer.entityName >###",
+      "url": "entities/###<= normalize(entity.name) >###s/geom/###<= normalize(geoPropertyName) >###",
+      "defaultStyle": "###<= layer.defaultStyle >###",
+      "availableStyles": ###<= JSON.stringify(layer.availableStyles) >###
+    }###< if (index != geojsonLayers.length - 1 || (wmsLayers.length + tileLayers.length) > 0 ) { >###,###< } >###
+    ###<
+          });
+        });
+    >###
+
+    ###<
+      wmsLayers.forEach(function(layer, index) {
+    >###
+    {
+      "layerType": "wms",
+      "name": "###<= layer.name >###",
+      "availableStyles": ###<= JSON.stringify(layer.availableStyles) >###,
+      "defaultStyle": "###<= layer.defaultStyle >###",
+      "options": {
+        "layers": [
+          ###< layer.layers.forEach(function(subLayer, subindex) { >###
+          "###<= normalize(data.basicData.packageInfo.artifact) >###:t_###<= camelToSnakeCase(subLayer) >###" ###<= (subindex != layer.layers.length - 1) ? "," : "" >###
+          ###< }); >###
+        ],
+        "format": "image/png",
+        "transparent": true
+      }
+    }###< if (index != wmsLayers.length - 1 || tileLayers.length > 0) { >###,###< } >###
+    ###<
+        });
+    >###
+    ###<
+      tileLayers.forEach(function(layer, index) {
+    >###
+    {
+      "layerType": "tilelayer",
+      "name": "###<= layer.name >###",
+      "url": "###<= layer.url >###"
+    }###< if (index != tileLayers.length - 1) { >###,###< } >###
+      ###<
+          });
+    >###
+  ]
+}
+###< } >###

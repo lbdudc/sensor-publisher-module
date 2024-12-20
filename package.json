@@ -1,0 +1,16 @@
+{
+  "name": "@lbdudc/sensorpublisher-module",
+  "type": "module",
+  "version": "1.0.0",
+  "homepage": "https://github.com/lbdudc/sensor-publisher-module.git",
+  "description": "Spl Module with annotated code for building IoT Datawarehouse",
+  "keywords": [
+    "iot",
+    "sensors",
+    "spl",
+    "dsl",
+    "deploy"
+  ],
+  "license": "MIT",
+  "author": "victor.lamas@udc.es"
+}

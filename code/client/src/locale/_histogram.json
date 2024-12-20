@@ -1,0 +1,22 @@
+###<@ return data.basicData.languages
+    .filter(function(lang) { return lang !== "es" && lang !== "gl"; })
+    .map(function(lang) {
+      return {
+        fileName: lang + '/components/histogram.json',
+        context: lang
+      };
+    });
+>###
+###< if (feature.SensorViewer) { >###
+{
+  "histogram": {
+    "label": "Histogram",
+    "selector-label": {
+      "from": "From",
+      "to": "To",
+      "category": "Category",
+      "operation": "Operation"
+    }
+  }
+}
+###< } >###

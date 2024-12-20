@@ -1,0 +1,12 @@
+###< if (feature.MV_LM_ExternalLayer) { >###
+[
+  "WMS",
+  "WCS",
+  "GeoTIFF",
+  "GeoJSON",
+  "GeoParquet",
+  "GeoPackage",
+  "Shapefile",
+  "ArcGIS"
+]
+###< } >###

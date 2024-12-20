@@ -1,0 +1,53 @@
+###< if (data.basicData.languages.find(lang => lang=='gl')) { >###
+###< if (feature.MWM_VisitSchedule) { >###
+{
+  "planned_event_crud": {
+    "actions": "Accións",
+    "address": "Dirección",
+    "back": "Atrás",
+    "cancel": "Cancelar",
+    "client": "Cliente",
+    "confirmation": "Está seguro de querer continuar?",
+    "continue": "Continuar",
+    "deleteVisit": "Borrar visita",
+    "description": "Descrición",
+    "edit": "Editar",
+    "employee": "Empregado",
+    "end": "Fin",
+    "visitDetail": "Detalle Visita",
+    "visitForm": "Formulario Visita",
+    "visitList": "Lista Visitas",
+    "formErrors": "Por favor solucione os erros no formulario",
+    "from": "Data dende",
+    "label": "Etiqueta",
+    "location": "Localización",
+    "new": "Novo",
+    "not_active_item": "[ELIMINADO]",
+    "permanentAction": "Esta acción será permanente",
+    "remove": "Borrar",
+    "save": "Gardar",
+    "search": "Buscar",
+    "select_client": "Seleccionar cliente",
+    "select_employee": "Seleccionar empregado",
+    "sort_events": "Ordenar eventos",
+    "start": "Inicio",
+    "startDateError": "A data inicial debe ser anterior á data final",
+    "state": "Estado",
+    "state_values": {
+      "DONE": "Feito",
+      "PENDING": "Pendiente"
+    },
+    "to": "Data ata",
+    "validation": {
+      "label_required": "Etiqueta necesaria",
+      "description_required": "Descrición necesaria",
+      "state_required": "Estado necesario",
+      "client_required": "Cliente necesario",
+      "employee_required": "Empregado necesario"
+    },
+    "date": "Data"
+  }
+}
+
+###< } >###
+###< } >###

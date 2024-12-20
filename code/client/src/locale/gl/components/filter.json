@@ -1,0 +1,70 @@
+###< if (data.basicData.languages.find(lang => lang=='gl') && feature.SensorViewer) { >###
+{
+  "filter": {
+    "label": "Filtros",
+    "spatial": "Espacial",
+    "categories": "Categorias",
+    "category": "Categoria",
+    "value": "Valor",
+    "territorial-unit": "Unidade territorial",
+    "aggregation": "Agregación",
+    "aggregations": "Agregacións",
+    "temporal": "Temporal",
+    "others": "Outros",
+    "month": "Mes",
+    "year": "Ano",
+    "sex": "Sexo",
+    "age": "Idade",
+    "date": "Data",
+    "magnitude": "Magnitude",
+    "instant": "Instante",
+    "rasters": "Rásters",
+    "items": {
+      "2020": "2020",
+      "2021": "2021",
+      "2022": "2022",
+      "JANUARY": "XANEIRO",
+      "FEBRUARY": "FEBREIRO",
+      "MARCH": "MARZO",
+      "APRIL": "ABRIL",
+      "MAY": "MAIO",
+      "JUNE": "XUÑO",
+      "JULY": "XULLO",
+      "AUGUST": "AGOSTO",
+      "SEPTEMBER": "SETEMBRO",
+      "OCTOBER": "OUTUBRO",
+      "NOVEMBER": "NOVEMBRO",
+      "DECEMBER": "DECEMBRO"
+    },
+    "debug-log": {
+      "active": "Debug log activado",
+      "inactive": "Debug log desactivado",
+      "log-dialog": {
+        "title": "Últimos logs",
+        "close": "Pechar"
+      }
+    },
+    "showSensorsSwitch":{
+      "streets":"Rúas",
+      "sensors":"Sensores"
+    }
+  },
+  ###< const dimensions = []; >###
+  ###< data?.dataWarehouse?.sensors.forEach(function(sensor) { >###
+    ###< sensor.measureData.forEach(function(measure, index) { >###
+      "###<= measure.name >###": "###<= normalize(measure.name.toLowerCase(), true) >###" ###< if (sensor.measureData.length >= index + 1) { >###,###< } >###
+      ###< if(measure.units != null && measure.units.length>0 ){ >### "###<= measure.units >###": "###<= measure.units >###" ###< if (sensor.measureData.length >= index + 1) { >###,###< } >### ###< } >###
+    ###< }); >###
+    ###< sensor.dimensions.forEach(function(dimension) { >###
+      ###< dimension.entities?.forEach(function(entity) { >###
+        ###< dimensions.push(entity); >###
+      ###< }); >###
+    ###< }); >###
+  ###< }); >###
+
+  ###< dimensions.forEach(function(dimension, index) { >###
+    "###<= normalize(dimension.toLowerCase(), true) >###": "###<= normalize(dimension.toLowerCase(), true) >###" ###< if (dimensions.length > index + 1) { >###,###< } >###
+  ###< }); >###
+}
+
+###< } >###
