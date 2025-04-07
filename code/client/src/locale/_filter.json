@@ -28,6 +28,11 @@
     "magnitude": "Magnitude",
     "instant": "Instant",
     "rasters": "Rasters",
+    "init-date": "Start date",
+    "end-date": "End date",
+    "sensor":"Sensor",
+    "measurements": "Measurements",
+    "routes": "Routes",
     "items": {
       "2020": "2020",
       "2021": "2021",

@@ -139,6 +139,69 @@ function createWMSStyle(style) {
     );
   }
 }
+/*% const hasMovingSensors = data.dataWarehouse.sensors?.find(function(sensor) {
+  return sensor.isMoving === true;
+});
+if(hasMovingSensors){
+%*/
+//Creates random styles definitions to be asociatted with a ship route
+function createShipRoutesRandomStyleDefinition(routesFeatureCollection) {
+  let sensorIds = [];
+  routesFeatureCollection.features.forEach((feature) => {
+    sensorIds.push(feature.properties.sensor_id);
+  });
+  sensorIds = [...new Set(sensorIds)];
+
+  let randomStyles = [];
+
+  let randomColorsStyle = {
+    name: "randomColorsStyle",
+    type: "StaticIntervalsStyle",
+    property: "data.sensor_id",
+    intervals: [],
+    defaultStyle: "grayPoint",
+  };
+
+  let intervalsById = [];
+
+  sensorIds.forEach((sensorId) => {
+    let interval = {
+      minValue: Number(sensorId),
+      maxValue: Number(sensorId),
+      style: sensorId,
+    };
+    intervalsById.push(interval);
+    let randomStyle = {
+      name: sensorId,
+      type: "GeoJSONLayerStyle",
+      fillColor: getRandomColor(sensorId),
+      strokeColor: getRandomColor(sensorId),
+      fillOpacity: 0.5,
+      strokeOpacity: 1,
+      radius: 3,
+    };
+    randomStyles.push(randomStyle);
+  });
+
+  randomColorsStyle.intervals = intervalsById;
+  randomStyles.push(randomColorsStyle);
+  return randomStyles;
+}
+
+function getRandomColor(id) {
+  const numericId =
+    typeof id === "number"
+      ? id
+      : Array.from(id).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const red = (numericId * 37) % 256;
+  const green = (numericId * 73) % 256;
+  const blue = (numericId * 97) % 256;
+  const color = `#${red.toString(16).padStart(2, "0")}${green
+    .toString(16)
+    .padStart(2, "0")}${blue.toString(16).padStart(2, "0")}`;
+  return color;
+}
+/*% } %*/
 
 export {
   getStyle,
@@ -146,5 +209,8 @@ export {
   createWMSStyle,
   createCategorizedStyle,
   createStaticIntervalsStyle,
+  /*% if(hasMovingSensors){ %*/
+  createShipRoutesRandomStyleDefinition,
+  /*% } %*/
 };
 /*% } %*/

@@ -9,9 +9,12 @@ if(dimension.categories){
 }else{
   dimension.type = 'string';
 };
-catDimensions.push(dimension);
+catDimensions.push(dimension);});
+spatialDimensions = sensor.dimensions.filter(function(dimension){return dimension.type == 'SPATIAL'}).map(function(dim){return dim.entities}).flat() || [];
+const hasMovingSensors = data.dataWarehouse.sensors?.find(function(sensor) {
+    return sensor.isMoving === true; });
 %*/
-/*% }); %*/
+CREATE EXTENSION IF NOT EXISTS timescaledb;
 CREATE EXTENSION IF NOT EXISTS dblink;
 
 CREATE OR REPLACE FUNCTION conditional_alter_table()
@@ -20,7 +23,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1
         FROM pg_views
-        WHERE viewname = ''agg_minute_/*%= camelToSnakeCase(normalize(sensor.id)) %*/''
+        WHERE viewname = ''agg_interval_/*%= camelToSnakeCase(normalize(sensor.id)) %*/''
     ) THEN
         EXECUTE ''ALTER TABLE /*%= tableName %*/ ALTER COLUMN "date" TYPE TIMESTAMPTZ'';
         /*% if(catDimensions.length > 0) { %*/
@@ -97,23 +100,66 @@ BEGIN
 END;
 ' LANGUAGE plpgsql;
 
+/*% if (hasMovingSensors) { %*/
+CREATE OR REPLACE FUNCTION update_measurements_for_spatial_aggregations()
+RETURNS TRIGGER AS '
+
+BEGIN
+    /*% spatialDimensions.forEach(function(dim, index){ %*/
+    UPDATE /*%= tableName %*/
+    SET /*%= camelToSnakeCase(normalize(dim)) %*/_id = t_/*%= camelToSnakeCase(normalize(dim)) %*/.id
+    FROM t_/*%= camelToSnakeCase(normalize(dim)) %*/
+    WHERE ST_Contains(t_/*%= camelToSnakeCase(normalize(dim)) %*/.geometry, NEW.geometry)
+      AND /*%= tableName %*/.id = NEW.id;
+
+    /*% }); %*/
+    RETURN NEW;
+END;
+' LANGUAGE plpgsql;
+/*% } %*/
+
 CREATE TRIGGER insert_combination_trigger_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
 BEFORE INSERT ON /*%= tableName %*/
 FOR EACH ROW
 EXECUTE FUNCTION insert_category_if_not_exists_/*%= camelToSnakeCase(normalize(sensor.id)) %*/();
 /*% } %*/
 
-create materialized view if not exists agg_minute_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
+create materialized view if not exists agg_interval_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
 with (timescaledb.continuous) as
 select
-time_bucket('/*%= sensor.time %*/ seconds', date) as bucket_minute,
+time_bucket('/*%= sensor.time %*/ seconds', date) as bucket_interval,
 sensor_id, /*% if(catDimensions.length > 0) { %*/category,/*% } %*/
 /*% sensor.measureData.forEach(function(measure,index){ %*/
 max(/*%= camelToSnakeCase(measure.name) %*/) as max_/*%= camelToSnakeCase(measure.name) %*/,
 min(/*%= camelToSnakeCase(measure.name) %*/) as min_/*%= camelToSnakeCase(measure.name) %*/,
-avg(/*%= camelToSnakeCase(measure.name) %*/) as avg_/*%= camelToSnakeCase(measure.name) %*//*% if (index < sensor.measureData.length -1) { %*/,/*% } %*/
-/*%});%*/
+avg(/*%= camelToSnakeCase(measure.name) %*/) as avg_/*%= camelToSnakeCase(measure.name) %*//*% if (index < sensor.measureData.length -1 || hasMovingSensors) { %*/,/*% } %*/
+/*%});
+if (hasMovingSensors) { %*/
+CASE
+    WHEN COUNT(geometry) = 1 THEN ST_AsText(MAX(geometry))::geometry
+    ELSE ST_MakeLine(geometry ORDER BY date)
+END AS geometry
+/*% } %*/
 from /*%= tableName %*/
+group by bucket_interval, sensor_id/*% if(catDimensions.length > 0) { %*/, category/*% } %*/;
+
+create materialized view if not exists agg_minute_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
+with (timescaledb.continuous) as
+select
+time_bucket('/*%= sensor.time %*/ seconds', bucket_interval) as bucket_minute,
+sensor_id, /*% if(catDimensions.length > 0) { %*/category,/*% } %*/
+/*% sensor.measureData.forEach(function(measure,index){ %*/
+max(max_/*%= camelToSnakeCase(measure.name) %*/) as max_/*%= camelToSnakeCase(measure.name) %*/,
+min(min_/*%= camelToSnakeCase(measure.name) %*/) as min_/*%= camelToSnakeCase(measure.name) %*/,
+avg(avg_/*%= camelToSnakeCase(measure.name) %*/) as avg_/*%= camelToSnakeCase(measure.name) %*//*% if (index < sensor.measureData.length -1 || hasMovingSensors) { %*/,/*% } %*/
+/*%});
+if (hasMovingSensors) { %*/
+CASE
+    WHEN COUNT(geometry) = 1 THEN ST_AsText(MAX(geometry))::geometry
+    ELSE ST_MakeLine(geometry ORDER BY date)
+END AS geometry
+/*% } %*/
+from agg_interval_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
 group by bucket_minute, sensor_id/*% if(catDimensions.length > 0) { %*/, category/*% } %*/;
 
 create materialized view if not exists agg_hour_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
@@ -124,8 +170,14 @@ sensor_id, /*% if(catDimensions.length > 0) { %*/category,/*% } %*/
 /*% sensor.measureData.forEach(function(measure,index){ %*/
 max(max_/*%= camelToSnakeCase(measure.name) %*/) as max_/*%= camelToSnakeCase(measure.name) %*/,
 min(min_/*%= camelToSnakeCase(measure.name) %*/) as min_/*%= camelToSnakeCase(measure.name) %*/,
-avg(avg_/*%= camelToSnakeCase(measure.name) %*/) as avg_/*%= camelToSnakeCase(measure.name) %*//*% if (index < sensor.measureData.length -1) { %*/,/*% } %*/
-/*%});%*/
+avg(avg_/*%= camelToSnakeCase(measure.name) %*/) as avg_/*%= camelToSnakeCase(measure.name) %*//*% if (index < sensor.measureData.length -1 || hasMovingSensors) { %*/,/*% } %*/
+/*%});
+if (hasMovingSensors){ %*/
+CASE
+    WHEN COUNT(geometry) = 1 THEN ST_AsText(MAX(geometry))::geometry
+    ELSE ST_MakeLine(geometry ORDER BY bucket_minute)
+END AS geometry
+/*% } %*/
 from agg_minute_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
 group by bucket_hour, sensor_id/*% if(catDimensions.length > 0) { %*/, category/*% } %*/;
 
@@ -137,10 +189,35 @@ sensor_id, /*% if(catDimensions.length > 0) { %*/category,/*% } %*/
 /*% sensor.measureData.forEach(function(measure,index){ %*/
 max(max_/*%= camelToSnakeCase(measure.name) %*/) as max_/*%= camelToSnakeCase(measure.name) %*/,
 min(min_/*%= camelToSnakeCase(measure.name) %*/) as min_/*%= camelToSnakeCase(measure.name) %*/,
-avg(avg_/*%= camelToSnakeCase(measure.name) %*/) as avg_/*%= camelToSnakeCase(measure.name) %*//*% if (index < sensor.measureData.length -1) { %*/,/*% } %*/
-/*%});%*/
+avg(avg_/*%= camelToSnakeCase(measure.name) %*/) as avg_/*%= camelToSnakeCase(measure.name) %*//*% if (index < sensor.measureData.length -1 || hasMovingSensors) { %*/,/*% } %*/
+/*%});
+if (hasMovingSensors) { %*/
+CASE
+    WHEN COUNT(geometry) = 1 THEN ST_AsText(MAX(geometry))::geometry
+    ELSE ST_Simplify(ST_MakeLine(geometry ORDER BY bucket_hour), 0.01)
+END AS geometry
+/*% } %*/
 from agg_hour_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
 group by bucket_day, sensor_id/*% if(catDimensions.length > 0) { %*/, category/*% } %*/;
+
+create materialized view if not exists agg_week_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
+with (timescaledb.continuous) as
+select
+time_bucket('1 week', bucket_day) as bucket_week,
+sensor_id, /*% if(catDimensions.length > 0) { %*/category,/*% } %*/
+/*% sensor.measureData.forEach(function(measure,index){ %*/
+max(max_/*%= camelToSnakeCase(measure.name) %*/) as max_/*%= camelToSnakeCase(measure.name) %*/,
+min(min_/*%= camelToSnakeCase(measure.name) %*/) as min_/*%= camelToSnakeCase(measure.name) %*/,
+avg(avg_/*%= camelToSnakeCase(measure.name) %*/) as avg_/*%= camelToSnakeCase(measure.name) %*//*% if (index < sensor.measureData.length -1 || hasMovingSensors) { %*/,/*% } %*/
+/*%});
+if (hasMovingSensors) { %*/
+CASE
+    WHEN COUNT(geometry) = 1 THEN ST_AsText(MAX(geometry))::geometry
+    ELSE ST_Simplify(ST_MakeLine(geometry ORDER BY bucket_day), 0.01)
+END AS geometry
+/*% } %*/
+from agg_day_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
+group by bucket_week, sensor_id/*% if(catDimensions.length > 0) { %*/, category/*% } %*/;
 
 create materialized view if not exists agg_month_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
 with (timescaledb.continuous) as
@@ -150,8 +227,14 @@ sensor_id, /*% if(catDimensions.length > 0) { %*/category,/*% } %*/
 /*% sensor.measureData.forEach(function(measure,index){ %*/
 max(max_/*%= camelToSnakeCase(measure.name) %*/) as max_/*%= camelToSnakeCase(measure.name) %*/,
 min(min_/*%= camelToSnakeCase(measure.name) %*/) as min_/*%= camelToSnakeCase(measure.name) %*/,
-avg(avg_/*%= camelToSnakeCase(measure.name) %*/) as avg_/*%= camelToSnakeCase(measure.name) %*//*% if (index < sensor.measureData.length -1) { %*/,/*% } %*/
-/*%});%*/
+avg(avg_/*%= camelToSnakeCase(measure.name) %*/) as avg_/*%= camelToSnakeCase(measure.name) %*//*% if (index < sensor.measureData.length -1 || hasMovingSensors) { %*/,/*% } %*/
+/*%});
+if (hasMovingSensors) { %*/
+CASE
+    WHEN COUNT(geometry) = 1 THEN ST_AsText(MAX(geometry))::geometry
+    ELSE ST_Simplify(ST_MakeLine(geometry ORDER BY bucket_day), 0.01)
+END AS geometry
+/*% } %*/
 from agg_day_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
 group by bucket_month, sensor_id/*% if(catDimensions.length > 0) { %*/, category/*% } %*/;
 
@@ -163,13 +246,121 @@ sensor_id, /*% if(catDimensions.length > 0) { %*/category,/*% } %*/
 /*% sensor.measureData.forEach(function(measure,index){ %*/
 max(max_/*%= camelToSnakeCase(measure.name) %*/) as max_/*%= camelToSnakeCase(measure.name) %*/,
 min(min_/*%= camelToSnakeCase(measure.name) %*/) as min_/*%= camelToSnakeCase(measure.name) %*/,
-avg(avg_/*%= camelToSnakeCase(measure.name) %*/) as avg_/*%= camelToSnakeCase(measure.name) %*//*% if (index < sensor.measureData.length -1) { %*/,/*% } %*/
-/*%});%*/
+avg(avg_/*%= camelToSnakeCase(measure.name) %*/) as avg_/*%= camelToSnakeCase(measure.name) %*//*% if (index < sensor.measureData.length -1 || hasMovingSensors) { %*/,/*% } %*/
+/*%});
+if (hasMovingSensors) { %*/
+CASE
+    WHEN COUNT(geometry) = 1 THEN ST_AsText(MAX(geometry))::geometry
+    ELSE ST_Simplify(ST_MakeLine(geometry ORDER BY bucket_month), 0.01)
+END AS geometry
+/*% } %*/
 from agg_month_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
 group by bucket_year, sensor_id/*% if(catDimensions.length > 0) { %*/, category/*% } %*/;
 
+/*% if (hasMovingSensors) {
+      spatialDimensions.forEach(function(dim, index) { %*/
+create materialized view if not exists agg_/*%= camelToSnakeCase(normalize(dim)) %*/_interval_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
+with (timescaledb.continuous) as
+select
+time_bucket('/*%= sensor.time %*/ seconds', date) as bucket_interval,
+/*%= camelToSnakeCase(normalize(dim)) %*/_id, /*% if(catDimensions.length > 0) { %*/category,/*% } %*/
+/*% sensor.measureData.forEach(function(measure,index){ %*/
+max(/*%= camelToSnakeCase(measure.name) %*/) as max_/*%= camelToSnakeCase(measure.name) %*/,
+min(/*%= camelToSnakeCase(measure.name) %*/) as min_/*%= camelToSnakeCase(measure.name) %*/,
+avg(/*%= camelToSnakeCase(measure.name) %*/) as avg_/*%= camelToSnakeCase(measure.name) %*//*% if (index < sensor.measureData.length -1) { %*/,/*% } %*/
+/*%}); %*/
+from /*%= tableName %*/
+group by bucket_interval, /*%= camelToSnakeCase(normalize(dim)) %*/_id/*% if(catDimensions.length > 0) { %*/, category/*% } %*/;
+
+create materialized view if not exists agg_/*%= camelToSnakeCase(normalize(dim)) %*/_minute_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
+with (timescaledb.continuous) as
+select
+time_bucket('/*%= sensor.time %*/ seconds', bucket_interval) as bucket_minute,
+/*%= camelToSnakeCase(normalize(dim)) %*/_id, /*% if(catDimensions.length > 0) { %*/category,/*% } %*/
+/*% sensor.measureData.forEach(function(measure,index){ %*/
+max(max_/*%= camelToSnakeCase(measure.name) %*/) as max_/*%= camelToSnakeCase(measure.name) %*/,
+min(min_/*%= camelToSnakeCase(measure.name) %*/) as min_/*%= camelToSnakeCase(measure.name) %*/,
+avg(avg_/*%= camelToSnakeCase(measure.name) %*/) as avg_/*%= camelToSnakeCase(measure.name) %*//*% if (index < sensor.measureData.length -1) { %*/,/*% } %*/
+/*%}); %*/
+from agg_/*%= camelToSnakeCase(normalize(dim)) %*/_interval_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
+group by bucket_minute, /*%= camelToSnakeCase(normalize(dim)) %*/_id/*% if(catDimensions.length > 0) { %*/, category/*% } %*/;
+
+create materialized view if not exists agg_/*%= camelToSnakeCase(normalize(dim)) %*/_hour_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
+with (timescaledb.continuous) as
+select
+time_bucket('1 hour', bucket_minute) as bucket_hour,
+/*%= camelToSnakeCase(normalize(dim)) %*/_id, /*% if(catDimensions.length > 0) { %*/category,/*% } %*/
+/*% sensor.measureData.forEach(function(measure,index){ %*/
+max(max_/*%= camelToSnakeCase(measure.name) %*/) as max_/*%= camelToSnakeCase(measure.name) %*/,
+min(min_/*%= camelToSnakeCase(measure.name) %*/) as min_/*%= camelToSnakeCase(measure.name) %*/,
+avg(avg_/*%= camelToSnakeCase(measure.name) %*/) as avg_/*%= camelToSnakeCase(measure.name) %*//*% if (index < sensor.measureData.length -1) { %*/,/*% } %*/
+/*%}); %*/
+from agg_/*%= camelToSnakeCase(normalize(dim)) %*/_minute_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
+group by bucket_hour, /*%= camelToSnakeCase(normalize(dim)) %*/_id/*% if(catDimensions.length > 0) { %*/, category/*% } %*/;
+
+create materialized view if not exists agg_/*%= camelToSnakeCase(normalize(dim)) %*/_day_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
+with (timescaledb.continuous) as
+select
+time_bucket('1 day', bucket_hour) as bucket_day,
+/*%= camelToSnakeCase(normalize(dim)) %*/_id, /*% if(catDimensions.length > 0) { %*/category,/*% } %*/
+/*% sensor.measureData.forEach(function(measure,index){ %*/
+max(max_/*%= camelToSnakeCase(measure.name) %*/) as max_/*%= camelToSnakeCase(measure.name) %*/,
+min(min_/*%= camelToSnakeCase(measure.name) %*/) as min_/*%= camelToSnakeCase(measure.name) %*/,
+avg(avg_/*%= camelToSnakeCase(measure.name) %*/) as avg_/*%= camelToSnakeCase(measure.name) %*//*% if (index < sensor.measureData.length -1) { %*/,/*% } %*/
+/*%}); %*/
+from agg_/*%= camelToSnakeCase(normalize(dim)) %*/_hour_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
+group by bucket_day, /*%= camelToSnakeCase(normalize(dim)) %*/_id/*% if(catDimensions.length > 0) { %*/, category/*% } %*/;
+
+create materialized view if not exists agg_/*%= camelToSnakeCase(normalize(dim)) %*/_week_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
+with (timescaledb.continuous) as
+select
+time_bucket('1 week', bucket_day) as bucket_week,
+/*%= camelToSnakeCase(normalize(dim)) %*/_id, /*% if(catDimensions.length > 0) { %*/category,/*% } %*/
+/*% sensor.measureData.forEach(function(measure,index){ %*/
+max(max_/*%= camelToSnakeCase(measure.name) %*/) as max_/*%= camelToSnakeCase(measure.name) %*/,
+min(min_/*%= camelToSnakeCase(measure.name) %*/) as min_/*%= camelToSnakeCase(measure.name) %*/,
+avg(avg_/*%= camelToSnakeCase(measure.name) %*/) as avg_/*%= camelToSnakeCase(measure.name) %*//*% if (index < sensor.measureData.length -1) { %*/,/*% } %*/
+/*%}); %*/
+from agg_/*%= camelToSnakeCase(normalize(dim)) %*/_day_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
+group by bucket_week, /*%= camelToSnakeCase(normalize(dim)) %*/_id/*% if(catDimensions.length > 0) { %*/, category/*% } %*/;
+
+create materialized view if not exists agg_/*%= camelToSnakeCase(normalize(dim)) %*/_month_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
+with (timescaledb.continuous) as
+select
+time_bucket('1 month', bucket_day) as bucket_month,
+/*%= camelToSnakeCase(normalize(dim)) %*/_id, /*% if(catDimensions.length > 0) { %*/category,/*% } %*/
+/*% sensor.measureData.forEach(function(measure,index){ %*/
+max(max_/*%= camelToSnakeCase(measure.name) %*/) as max_/*%= camelToSnakeCase(measure.name) %*/,
+min(min_/*%= camelToSnakeCase(measure.name) %*/) as min_/*%= camelToSnakeCase(measure.name) %*/,
+avg(avg_/*%= camelToSnakeCase(measure.name) %*/) as avg_/*%= camelToSnakeCase(measure.name) %*//*% if (index < sensor.measureData.length -1) { %*/,/*% } %*/
+/*%}); %*/
+from agg_/*%= camelToSnakeCase(normalize(dim)) %*/_day_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
+group by bucket_month, /*%= camelToSnakeCase(normalize(dim)) %*/_id/*% if(catDimensions.length > 0) { %*/, category/*% } %*/;
+
+create materialized view if not exists agg_/*%= camelToSnakeCase(normalize(dim)) %*/_year_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
+with (timescaledb.continuous) as
+select
+time_bucket('1 year', bucket_month) as bucket_year,
+/*%= camelToSnakeCase(normalize(dim)) %*/_id, /*% if(catDimensions.length > 0) { %*/category,/*% } %*/
+/*% sensor.measureData.forEach(function(measure,index){ %*/
+max(max_/*%= camelToSnakeCase(measure.name) %*/) as max_/*%= camelToSnakeCase(measure.name) %*/,
+min(min_/*%= camelToSnakeCase(measure.name) %*/) as min_/*%= camelToSnakeCase(measure.name) %*/,
+avg(avg_/*%= camelToSnakeCase(measure.name) %*/) as avg_/*%= camelToSnakeCase(measure.name) %*//*% if (index < sensor.measureData.length -1) { %*/,/*% } %*/
+/*%}); %*/
+from agg_/*%= camelToSnakeCase(normalize(dim)) %*/_month_/*%= camelToSnakeCase(normalize(sensor.id)) %*/
+group by bucket_year, /*%= camelToSnakeCase(normalize(dim)) %*/_id/*% if(catDimensions.length > 0) { %*/, category/*% } %*/;
+/*%  });
+} %*/
+
 ALTER MATERIALIZED VIEW agg_day_/*%= camelToSnakeCase(normalize(sensor.id)) %*/ set (timescaledb.materialized_only = false);
 ALTER MATERIALIZED VIEW agg_hour_/*%= camelToSnakeCase(normalize(sensor.id)) %*/ set (timescaledb.materialized_only = false);
+
+/*% if (hasMovingSensors) {
+spatialDimensions.forEach(function(dim, index) { %*/
+ALTER MATERIALIZED VIEW agg_/*%= camelToSnakeCase(normalize(dim)) %*/_day_/*%= camelToSnakeCase(normalize(sensor.id)) %*/ set (timescaledb.materialized_only = false);
+ALTER MATERIALIZED VIEW agg_/*%= camelToSnakeCase(normalize(dim)) %*/_hour_/*%= camelToSnakeCase(normalize(sensor.id)) %*/ set (timescaledb.materialized_only = false);
+
+/*% }); } %*/
 
 CALL refresh_continuous_aggregate('agg_minute_/*%= camelToSnakeCase(normalize(sensor.id)) %*/', NULL, NULL);
 CALL refresh_continuous_aggregate('agg_hour_/*%= camelToSnakeCase(normalize(sensor.id)) %*/', NULL, NULL);
@@ -177,5 +368,14 @@ CALL refresh_continuous_aggregate('agg_day_/*%= camelToSnakeCase(normalize(senso
 CALL refresh_continuous_aggregate('agg_month_/*%= camelToSnakeCase(normalize(sensor.id)) %*/', NULL, NULL);
 CALL refresh_continuous_aggregate('agg_year_/*%= camelToSnakeCase(normalize(sensor.id)) %*/', NULL, NULL);
 
+/*% if (hasMovingSensors) {
+spatialDimensions.forEach(function(dim, index) { %*/
+CALL refresh_continuous_aggregate('agg_/*%= camelToSnakeCase(normalize(dim)) %*/_minute_/*%= camelToSnakeCase(normalize(sensor.id)) %*/', NULL, NULL);
+CALL refresh_continuous_aggregate('agg_/*%= camelToSnakeCase(normalize(dim)) %*/_hour_/*%= camelToSnakeCase(normalize(sensor.id)) %*/', NULL, NULL);
+CALL refresh_continuous_aggregate('agg_/*%= camelToSnakeCase(normalize(dim)) %*/_day_/*%= camelToSnakeCase(normalize(sensor.id)) %*/', NULL, NULL);
+CALL refresh_continuous_aggregate('agg_/*%= camelToSnakeCase(normalize(dim)) %*/_month_/*%= camelToSnakeCase(normalize(sensor.id)) %*/', NULL, NULL);
+CALL refresh_continuous_aggregate('agg_/*%= camelToSnakeCase(normalize(dim)) %*/_year_/*%= camelToSnakeCase(normalize(sensor.id)) %*/', NULL, NULL);
+
+/*% }); } %*/
 /*% }); %*/
 /*% } %*/

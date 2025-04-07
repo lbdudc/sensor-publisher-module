@@ -1,4 +1,7 @@
-###< if (feature.SensorViewer) { >###
+###< if (feature.SensorViewer) {
+  const hasMovingSensors = data.dataWarehouse.sensors?.find(function(sensor) {
+    return sensor.isMoving === true; });
+>###
 {
   "specs": [
     ###< const getTemporalIntervals = function(time) {
@@ -44,10 +47,13 @@
             value: 3153600000
         },
       ];
-
-        return intervalRel.filter(function(interval) {
+        let result = intervalRel.filter(function(interval) {
           return interval.value >= time;
-      });
+        });
+        if (hasMovingSensors){
+          result.push({label: 'RANGE', text: 'aggregation.temporal.items.range'});
+        }
+        return result;
     }; >###
 
     ###< if (feature.SensorViewer) { >###
@@ -67,7 +73,9 @@
     {
           "id": "###<= sensor.id >###",
           "name": "###<= sensor.id >###",
+          ###< if (sensor.isMoving) { >###
           "isMoving": ###<= sensor.isMoving >###,
+          ###< } >###
           "repository": "###<= sensor.id >###EntityRepository",
           "repository_url": "###<= camelToSnakeCase(normalize(sensor.id)) >###",
           "store": {
@@ -114,7 +122,7 @@
               ###< sensor.dimensions.filter(function(dim) { return dim.type == 'CATEGORICAL'
                   }).forEach(function(dim) { >###
                   {
-                    "label": "aggregation.category.items.###<= normalize(dim.id) >###",
+                    "label": "aggregation.category.items.###<= normalize(dim.id.toLowerCase(), true) >###",
                     "value": "###<= normalize(dim.field) >###"
                   ###< if (dim.categories != null) { >###
                     ,

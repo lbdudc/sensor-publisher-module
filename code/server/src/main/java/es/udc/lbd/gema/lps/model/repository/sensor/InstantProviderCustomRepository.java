@@ -17,6 +17,9 @@ public interface InstantProviderCustomRepository {
   Page<Instant> getDayInstantsByDate(
       String sensorId, LocalDateTime dateInit, LocalDateTime dateEnd, Pageable pageable);
 
+  Page<Instant> getWeekInstantsByDate(
+      String sensorId, LocalDateTime dateInit, LocalDateTime dateEnd, Pageable pageable);
+
   Page<Instant> getMonthInstantsByDate(
       String sensorId, LocalDateTime dateInit, LocalDateTime dateEnd, Pageable pageable);
 

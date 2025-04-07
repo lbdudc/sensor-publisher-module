@@ -21,8 +21,9 @@
         });
   });
   var hasCategoricalDims = dimensions.length > 0;
+  const hasMovingSensors = data.dataWarehouse.sensors?.find(function(sensor) {
+    return sensor.isMoving === true; });
 %*/
-
 package es.udc.lbd.gema.lps.model.service.dto.sensor;
 
 import es.udc.lbd.gema.lps.model.domain.sensor.CalcAggregation;
@@ -34,7 +35,9 @@ import java.util.List;
 import java.util.Map;
 
 public class /*%= normalize(context.id, true) %*/StateRequestDto {
-
+  /*% if (hasMovingSensors) { %*/
+  private Long sensorFilter;
+  /*% } %*/
   private LocalDateTime start;
   private LocalDateTime end;
   private /*%= normalize(context.id, true) %*/SpatialAggregation spatialAggregation;
@@ -52,6 +55,9 @@ public class /*%= normalize(context.id, true) %*/StateRequestDto {
   private String categoryTo;
   /*% } %*/
   private List<String> properties;
+  /*% if (hasMovingSensors) { %*/
+  private String spatialOperation;
+  /*% } %*/
 
   public /*%= normalize(context.id, true) %*/StateRequestDto() {}
 
@@ -119,6 +125,24 @@ public class /*%= normalize(context.id, true) %*/StateRequestDto {
     this.spatialFilter = spatialFilter;
   }
 
+  /*% if (hasMovingSensors) { %*/
+  public String getSpatialOperation() {
+    return spatialOperation;
+  }
+
+  public void setSpatialOperation(String spatialOperation) {
+    this.spatialOperation = spatialOperation;
+  }
+
+  public Long getSensorFilter() {
+    return sensorFilter;
+  }
+
+  public void setSensorFilter(Long sensorFilter) {
+    this.sensorFilter = sensorFilter;
+  }
+
+  /*% } %*/
   public Integer getSpatialFilterId() {
     return spatialFilterId;
   }

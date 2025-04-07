@@ -9,9 +9,11 @@ import org.springframework.data.domain.Pageable;
 import es.udc.lbd.gema.lps.model.service.dto.sensor.InstantDTO;
 
 public interface InstantProviderService {
-    Page<InstantDTO> findInstantsByDate(String sensorId, LocalDate date, Pageable pageable);
+  Page<InstantDTO> findInstantsByDate(String sensorId, LocalDate date, Pageable pageable);
 
   Page<InstantDTO> findDayInstantsByDate(String sensorId, LocalDate date, Pageable pageable);
+
+  Page<InstantDTO> findWeekInstantsByDate(String sensorId, LocalDate date, Pageable pageable);
 
   Page<InstantDTO> findMonthInstantsByDate(String sensorId, LocalDate date, Pageable pageable);
 

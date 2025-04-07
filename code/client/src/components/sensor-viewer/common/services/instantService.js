@@ -18,6 +18,7 @@ async function getPages() {
 }
 
 async function getInstants(params, url, totalInstantsPages, pageSize) {
+  if (params.TEMPORAL_AGGREGATION == "RANGE") return []
   let pageFilter = params.PAGE_FILTER;
   !pageSize ? (pageSize = PAGE_SIZE) : (pageFilter = null);
 
@@ -35,9 +36,10 @@ async function getInstants(params, url, totalInstantsPages, pageSize) {
     if (
       params.TEMPORAL_AGGREGATION === "NONE" ||
       params.TEMPORAL_AGGREGATION === "DAY" ||
-      params.TEMPORAL_AGGREGATION === "HOUR"
+      params.TEMPORAL_AGGREGATION === "HOUR" ||
+      params.TEMPORAL_AGGREGATION === "WEEK"
     ) {
-      options.params.date = date; 
+      options.params.date = date;
     } else if (params.TEMPORAL_AGGREGATION === "MONTH") {
       options.params.date = params.YEAR_FILTER + "-01-01";
     }
@@ -53,6 +55,10 @@ async function getInstants(params, url, totalInstantsPages, pageSize) {
       res.content.forEach((el) => {
         el.params = { dayAsNumber: el.label };
         el.label = "calendar.dayOfWeek." + dateArrayToDate(el.value).getDay();
+      });
+    } else if (params.TEMPORAL_AGGREGATION === "WEEK") {
+      res.content.forEach((el) => {
+        el.label = getWeekInterval(el);
       });
     }
     return res.content.reverse();
@@ -91,6 +97,24 @@ function getInstantsDefaultValue(items, store) {
     return aux;
   }
 }
+
+function getWeekInterval(dateAsArray) {
+  let date = new Date();
+  date.setFullYear(dateAsArray.value[0]);
+  date.setMonth(dateAsArray.value[1] - 1);
+  date.setDate(dateAsArray.value[2]);
+  date.setDate(date.getDate() + 7);
+  const labelInterval =
+    dateAsArray.label +
+    "/" +
+    dateAsArray.value[1] +
+    " - " +
+    date.getDate() +
+    "/" +
+    (date.getMonth() + 1);
+  return labelInterval;
+}
+
 export default {
   PAGE_SIZE,
   getPages,

@@ -92,6 +92,22 @@ public class InstantProviderCustomRepositoryImpl implements InstantProviderCusto
   }
 
   @Override
+  public Page<Instant> getWeekInstantsByDate(
+      String sensorId, LocalDateTime dateInit, LocalDateTime dateEnd, Pageable pageable) {
+    String weeksByMonthQuery =
+        "SELECT DISTINCT(bucket_week) from agg_week_"
+            + sensorId
+            + " where bucket_week > '"
+            + dateInit
+            + "' and bucket_week < '"
+            + dateEnd
+            + "' order by bucket_week DESC";
+    Query query = entityManager.createNativeQuery(weeksByMonthQuery);
+    List<Instant> resultList = query.getResultList();
+    return transformTimestampListToPage(resultList, pageable);
+  }
+
+  @Override
   public Page<Instant> getMonthInstantsByDate(
       String sensorId, LocalDateTime dateInit, LocalDateTime dateEnd, Pageable pageable) {
 

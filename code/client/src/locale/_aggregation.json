@@ -7,7 +7,10 @@
       };
     });
 >###
-###< if (feature.SensorViewer) { >###
+###< if (feature.SensorViewer) {
+  const hasMovingSensors = data.dataWarehouse.sensors?.find(function(sensor) {
+    return sensor.isMoving === true; });
+>###
 {
   "aggregation": {
     "label": "Aggregation",
@@ -26,15 +29,28 @@
           "###<= normalize(entity.toLowerCase(), true) >###": "###<= normalize(entity.toLowerCase(), true) >###" ###< if (entities.length > index + 1) { >###,###< } >###
         ###< }); >###
       }
+      ###< if (hasMovingSensors) { >###
+      ,"operation": {
+        "label": "Spatial operation",
+        "items": {
+          "contains":"Contains",
+          "intersects": "Intersects"
+        }
+      }
+      ###< } >###
     },
     "temporal": {
       "items": {
+        "minutely": "Minutely",
         "hourly": "Hourly",
         "daily": "Daily",
         "monthly": "Monthly",
         "weekly": "Weekly",
         "yearly": "Yearly",
         "no_grouping": "No aggregation"
+        ###< if (hasMovingSensors) { >###
+        ,"range": "Range"
+        ###< } >###
       }
     },
     "operational": {
@@ -77,7 +93,7 @@
         ###< }); >###
 
         ###< categories.forEach(function(category, index) { >###
-          "###<= category.toLowerCase() >###": "###<= normalize(category.toLowerCase(), true) >###" ###< if (categories.length > index + 1) { >###,###< } >###
+          "###<= normalize(category.toLowerCase(), true) >###": "###<= normalize(category.toLowerCase(), true) >###" ###< if (categories.length > index + 1) { >###,###< } >###
         ###< }); >###
       }
     },

@@ -1,4 +1,8 @@
-/*% if (feature.SensorViewer) { %*/
+/*% if (feature.SensorViewer) {
+  const hasMovingSensors = data.dataWarehouse.sensors?.find(function(sensor) {
+    return sensor.isMoving === true; });
+%*/
+
 package es.udc.lbd.gema.lps.model.domain.sensor;
 
 public enum TemporalAggregation {
@@ -9,6 +13,9 @@ public enum TemporalAggregation {
   HOUR,
   MINUTE,
   SECOND,
+  /*% if (hasMovingSensors) { %*/
+  RANGE,
+  /*% } %*/
   NONE;
 }
 /*% } %*/

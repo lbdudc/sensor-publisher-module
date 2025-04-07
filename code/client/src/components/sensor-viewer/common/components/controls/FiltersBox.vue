@@ -1,4 +1,6 @@
-/*% if (feature.SensorViewer && feature.SV_FiltersBox) { %*/
+/*% if (feature.SensorViewer && feature.SV_FiltersBox) {
+const hasMovingSensors = data.dataWarehouse.sensors?.find(function(sensor) {
+return sensor.isMoving === true; }); %*/
 <template>
   <v-navigation-drawer
     v-model="localDrawer"
@@ -22,7 +24,7 @@
       </v-card-title>
       <v-card-text class="card-text">
         <v-container class="pt-0">
-          <v-row no-gutters align="center" class="mt-2">
+          <v-row no-gutters align="center" class="mt-2" /*% if (hasMovingSensors) { %*/v-if="this.store.getSelector('MEASUREMENTS_FLAG')?.value == 1"/*% } %*/ >
             <v-icon class="section-title mr-2">public</v-icon>
             <h3 class="section-title">
               {{ $t("filter.spatial") }}
@@ -55,7 +57,6 @@
                     :store="store"
                   ></m-selector>
                 </v-col>
-
                 <v-col cols="12" class="item-negative-margin">
                   <m-selector
                     id="SPATIAL_FILTER_TYPE"
@@ -79,9 +80,28 @@
                     :store="store"
                   ></m-selector>
                 </v-col>
+                /*% if(hasMovingSensors){ %*/
                 <v-col cols="12" class="item-negative-margin">
                   <m-autocomplete
+                    v-if="this.showSpatialOperationSelector()"
+                    id="SPATIAL_OPERATION"
+                    append-icon="filter_alt"
+                    clearable
+                    dense
+                    :i18nLabel="this.$t"
+                    :i18nItems="this.$t"
+                    outlined
+                    :store="store"
+                  ></m-autocomplete>
+                </v-col>
+                /*% } %*/
+                <v-col cols="12" class="item-negative-margin">
+                  <m-autocomplete
+                    /*% if(hasMovingSensors) { %*/
+                    v-if="this.showSpatialFilterIdSelector()"
+                    /*% } else { %*/
                     v-if="!!this.store.getSelector('SPATIAL_FILTER_TYPE').value"
+                    /*% } %*/
                     id="SPATIAL_FILTER"
                     append-icon="filter_alt"
                     clearable
@@ -92,7 +112,6 @@
                   ></m-autocomplete>
                 </v-col>
                 /*% } %*/
-
               </v-row>
               <!-- <v-row no-gutters>
                 <v-col
@@ -163,13 +182,54 @@
                   ></m-selector>
                 </v-col>
               </v-row>
+              /*% if (hasMovingSensors){ %*/
+              <div
+                v-if="
+                  this.store.getSelector('TEMPORAL_AGGREGATION').value ==
+                  'RANGE'
+                "
+              >
+                <v-row no-gutters align="center">
+                  <m-date-filter
+                    dense
+                    type="date"
+                    :store="store"
+                    :i18n="this.$t"
+                    :firstDayOfWeek="1"
+                    id="INIT_DATE_FILTER"
+                    :max-value="maxValue"
+                    @change="setInitDate"
+                  ></m-date-filter>
+                </v-row>
+                <v-row no-gutters align="center">
+                  <m-date-filter
+                    dense
+                    type="date"
+                    :store="store"
+                    :i18n="this.$t"
+                    :firstDayOfWeek="1"
+                    id="END_DATE_FILTER"
+                    :max-value="maxValue"
+                    :min-value="minValue"
+                  ></m-date-filter>
+                </v-row>
+              </div>
+              /*% } %*/
             </v-col>
           </v-row>
           /*% } %*/
-            <v-row no-gutters align="center" v-if="showCategoryBox">
+          <v-row no-gutters align="center" v-if="showCategoryBox">
             <v-icon class="section-title mr-2"> mdi-ruler </v-icon>
             <h3 class="section-title">{{ $t("filter.categories") }}</h3>
             <v-spacer></v-spacer>
+            <v-btn
+              class="section-title"
+              icon
+              @click="() => (showCategoryBox = !showCategoryBox)"
+            >
+              <v-icon v-if="showCategoryBox">expand_less</v-icon>
+              <v-icon v-else>expand_more</v-icon>
+            </v-btn>
             <v-col cols="12">
               <v-row no-gutters class="mt-0">
                 <v-col cols="12">
@@ -179,7 +239,6 @@
                     :disabled="realTime"
                     :hideLoading="realTime"
                     /*% } %*/
-                    append-icon="mdi-calendar-search"
                     dense
                     :i18nLabel="this.$t"
                     :i18nItems="this.$t"
@@ -201,16 +260,46 @@
                       !this.store?.getSelector('CATEGORY_AGGREGATION')?.value
                     "
                     /*% } %*/
-                    append-icon="mdi-calendar-search"
                     dense
                     :i18nLabel="this.$t"
                     outlined
+                    clearable
                     :store="store"
                   ></m-selector>
                 </v-col>
               </v-row>
             </v-col>
           </v-row>
+          /*% if(hasMovingSensors){ %*/
+          <v-row no-gutters align="center">
+            <v-icon class="section-title mr-2"> mdi-ferry </v-icon>
+            <h3 class="section-title">{{ $t("filter.sensor") }}</h3>
+            <v-spacer></v-spacer>
+            <v-btn
+              class="section-title"
+              icon
+              @click="() => (showSensorsBox = !showSensorsBox)"
+            >
+              <v-icon v-if="showSensorsBox">expand_less</v-icon>
+              <v-icon v-else>expand_more</v-icon>
+            </v-btn>
+            <v-col cols="12" v-if="showSensorsBox">
+              <v-row no-gutters class="mt-0">
+                <v-col cols="12">
+                  <m-selector
+                    id="SENSOR_FILTER"
+                    :hideLoading="realTime"
+                    dense
+                    :i18nLabel="this.$t"
+                    outlined
+                    :store="store"
+                    clearable
+                  ></m-selector>
+                </v-col>
+              </v-row>
+            </v-col>
+          </v-row>
+          /*% } %*/
           <v-row no-gutters align="center">
             <v-icon class="section-title mr-2">tune</v-icon>
             <h3 class="section-title">{{ $t("filter.others") }}</h3>
@@ -278,18 +367,20 @@
 </template>
 
 <script>
-import { MSelector, MAutocomplete } from "magical-state/vue2-components";
+import { MSelector, MAutocomplete /*% if(hasMovingSensors){ %*/ , MDateFilter/*% } %*/ } from "magical-state/vue2-components";
 import {
-  AGGREGATIONS,
   FILTERS,
   FLAGS,
   RASTERS,
   TIME_INTERVALS,
 } from "@/components/sensor-viewer/common/utils/const.js";
+/*% if(hasMovingSensors){ %*/
+import { formatDateNowTimeZone } from "@/components/sensor-viewer/common/utils/date-utils";
+/*% } %*/
 
 export default {
   name: "FiltersBox",
-  components: { MSelector, MAutocomplete },
+  components: { MSelector, MAutocomplete /*% if(hasMovingSensors){ %*/ , MDateFilter/*% } %*/ },
   props: {
     showSourceSelector: {
       type: Boolean,
@@ -310,6 +401,11 @@ export default {
         this.store?.getSelector("CATEGORY_AGGREGATION")?.items.length > 0,
       showOtherBox: true,
       drawer: true,
+      /*% if(hasMovingSensors){ %*/
+      showSensorsBox: true,
+      maxValue: formatDateNowTimeZone(),
+      minValue: formatDateNowTimeZone(),
+      /*% } %*/
     };
   },
   computed: {
@@ -331,17 +427,6 @@ export default {
           this.$emit("show_rasters", false);
           await this.store.change(FLAGS.SENSORS, newVal);
         }
-      },
-    },
-    useElastic: {
-      get() {
-        return this.store.getSelector(FLAGS.ELASTIC)?.value;
-      },
-      async set(newVal) {
-        if (newVal) {
-          this.showRasters = false;
-        }
-        await this.store.change(FLAGS.ELASTIC, newVal, true);
       },
     },
     localDrawer: {
@@ -375,6 +460,26 @@ export default {
         }
       }
     },
+    /*% if(hasMovingSensors){ %*/
+    setInitDate() {
+      this.minValue = this.store?.getSelector("INIT_DATE_FILTER").value;
+    },
+    showSpatialOperationSelector() {
+      const agg = this.store.getSelector("SPATIAL_AGGREGATION").value;
+      const filter = this.store.getSelector("SPATIAL_FILTER_TYPE").value;
+      return agg != null && filter != null && agg !== filter;
+    },
+    showSpatialFilterIdSelector() {
+      const { value: agg } = this.store.getSelector("SPATIAL_AGGREGATION");
+      const { value: filter } = this.store.getSelector("SPATIAL_FILTER_TYPE");
+      const { value: op } = this.store.getSelector("SPATIAL_OPERATION");
+      return (
+        agg != null &&
+        filter != null &&
+        (agg === filter ? op == null : op != null)
+      );
+    },
+    /*% } %*/
   },
 };
 </script>

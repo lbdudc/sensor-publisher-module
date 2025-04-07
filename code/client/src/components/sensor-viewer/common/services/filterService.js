@@ -10,6 +10,8 @@
       });
   });
   var hasCategoricalDims = dimensions.length > 0;
+  const hasMovingSensors = data.dataWarehouse.sensors?.find(function(sensor) {
+  return sensor.isMoving === true; });
 %*/
 import RepositoryFactory from "@/repositories/RepositoryFactory";
 import {
@@ -45,10 +47,16 @@ async function getSpatialFilterItems(params, ccaa) {
 }
 
 /*% if (hasCategoricalDims) { %*/
-async function getCategoryFilterItems(params, repo_url, sensor_name, categoryItems, store) {
+async function getCategoryFilterItems(
+  params,
+  repo_url,
+  sensor_name,
+  categoryItems
+) {
   let res = [];
-  if (store == null || params["CATEGORY_AGGREGATION"] == null) return [];
-
+  if (params["CATEGORY_AGGREGATION"] == null) {
+    return [];
+  }
   // Early return category Items if are defined in the spec
   const categoryItemsSpec = categoryItems?.find(
     (cat) =>
@@ -60,19 +68,6 @@ async function getCategoryFilterItems(params, repo_url, sensor_name, categoryIte
       label: cat.label,
     }));
   }
-
-  let calcTempAgg = null;
-  if (store["TEMPORAL_AGGREGATION"]) {
-    calcTempAgg =
-      store["TEMPORAL_AGGREGATION"] == "NONE"
-        ? null
-        : store["TEMPORAL_AGGREGATION"];
-  }
-
-  const parsedDate = !!store["INSTANT_FILTER"]
-    ? dateArrayToDate(store["INSTANT_FILTER"]).toISOString()
-    : new Date(store["DATE_FILTER"]).toISOString();
-
   // Build options for the request
   const options = {
     params: {
@@ -81,8 +76,6 @@ async function getCategoryFilterItems(params, repo_url, sensor_name, categoryIte
       category: params["CATEGORY_AGGREGATION"]
         ? params["CATEGORY_AGGREGATION"].toLowerCase()
         : null,
-      date: parsedDate,
-      aggregation: calcTempAgg,
       sensorId: null,
     },
   };
@@ -94,7 +87,6 @@ async function getCategoryFilterItems(params, repo_url, sensor_name, categoryIte
   } catch (e) {
     return [];
   }
-
   return res;
 }
 /*% } %*/
@@ -130,6 +122,12 @@ function getDateFilterDefaultValue(store) {
   }
 }
 
+/*% if(hasMovingSensors){ %*/
+function getRangeDateFilterDefaultValue(store) {
+  return new Date();
+}
+/*% } %*/
+
 function getYearFilterDefaultValue(store) {
   const date = !!store["INSTANT_FILTER"]
     ? `${dateArrayToDate(store["INSTANT_FILTER"]).getFullYear()}`
@@ -157,6 +155,24 @@ function getDefaultMonth() {
   return today.getFullYear() + "-" + mm;
 }
 
+/*% if(hasMovingSensors){ %*/
+async function getSensorFilterItems() {
+  const repository = RepositoryFactory.get(
+    `ShipObservationEntityEntityRepository`
+  );
+  let result = [];
+  try {
+    const res = await repository.getAll();
+    res.content.forEach((e) => {
+      result.push({ label: e.name, value: e.id });
+    });
+  } catch (e) {
+    return [];
+  }
+  return result;
+}
+/*% } %*/
+
 export default {
   getSpatialFilterItems,
 /*% if (hasCategoricalDims) { %*/
@@ -164,5 +180,9 @@ export default {
 /*% } %*/
   getDateFilterDefaultValue,
   getYearFilterDefaultValue,
+  /*% if(hasMovingSensors){ %*/
+  getRangeDateFilterDefaultValue,
+  getSensorFilterItems,
+/*% } %*/
 };
 /*% } %*/

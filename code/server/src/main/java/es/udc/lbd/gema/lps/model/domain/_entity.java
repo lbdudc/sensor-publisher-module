@@ -16,10 +16,12 @@
            return m[0] + "_" + m[1];
        }).toLowerCase();
     }
- %*/
-
-/*%
     isFactTableEntity = feature.SensorViewer ? data.dataWarehouse.sensors.some(sensor => sensor.factTableEntity === normalize(context.name, true)) : false;
+    spatialDims = [];
+    if(isFactTableEntity){
+      spatialDims = data.dataWarehouse.sensors.find(sen => sen.factTableEntity === normalize(context.name, true)).dimensions.filter(function(dim){return dim.type === 'SPATIAL'});
+      spatialDims = spatialDims.map(function(dim){return dim.entities}).flat();
+    }
 %*/
 package es.udc.lbd.gema.lps.model.domain;
 
@@ -50,6 +52,10 @@ import org.locationtech.jts.geom.Geometry;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+/*% if (feature.DM_DS_Address) { %*/
+import jakarta.persistence.CascadeType;
+import es.udc.lbd.gema.lps.component.geolocation.model.domain.GCAddress;
+/*% } %*/
 /*% } %*/
 /*% if(checkEntityContainsPatternOfTypes(context, patternTypes)) { %*/
 import es.udc.lbd.gema.lps.config.Constants;
@@ -231,6 +237,13 @@ public /*% if (context.abstract) { %*/abstract /*% } %*/class /*%= normalize(con
     private /*%= propertyClass %*/ /*%= normalize(prop.name) %*/;
 
     /*% }); %*/
+
+    /*% spatialDims.forEach(function(dim){ %*/
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "/*%= camelToSnake(normalize(dim)) %*/_id")
+    private /*%= dim %*/ /*%= normalize(dim) %*/Id;
+    /*% }); %*/
+
     public /*%= normalize(context.name, true) %*/() {
     }
 
@@ -254,5 +267,17 @@ public /*% if (context.abstract) { %*/abstract /*% } %*/class /*%= normalize(con
         this./*%= normalize(prop.name) %*/ = /*%= normalize(prop.name) %*/;
     }
 
-    /*% }); %*/
+    /*% });
+
+  spatialDims.forEach(function(dim){ %*/
+    public /*%= dim %*/ get/*%= normalize(dim) %*/Id() {
+      return /*%= normalize(dim) %*/Id;
+    }
+
+    public void set/*%= dim %*/Id(/*%= dim %*/ /*%= dim.toLowerCase() %*/Id) {
+      this./*%= normalize(dim) %*/Id = /*%= normalize(dim) %*/Id;
+    }
+
+  /*% }); %*/
 }
+

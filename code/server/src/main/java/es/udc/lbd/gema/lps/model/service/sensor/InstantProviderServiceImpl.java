@@ -58,6 +58,19 @@ public class InstantProviderServiceImpl implements InstantProviderService {
   }
 
   @Override
+  public Page<InstantDTO> findWeekInstantsByDate(
+      String sensorId, LocalDate date, Pageable pageable) {
+    return instantProviderRepository
+        .getWeekInstantsByDate(
+            sensorId, date.atStartOfDay(), date.plusMonths(1).atStartOfDay(), pageable)
+        .map(
+            d -> {
+              LocalDateTime localDate = d.atZone(ZoneId.systemDefault()).toLocalDateTime();
+              return new InstantDTO<>(localDate, String.valueOf(localDate.getDayOfMonth()));
+            });
+  }
+
+  @Override
   public Page<InstantDTO> findMonthInstantsByDate(
       String sensorId, LocalDate date, Pageable pageable) {
     return instantProviderRepository
@@ -85,7 +98,7 @@ public class InstantProviderServiceImpl implements InstantProviderService {
   public List<InstantDTO<Object>> findAllYearInstants(String sensorId) {
       return instantProviderRepository
           .getYearInstantsByDate(sensorId, Pageable.unpaged())
-          .stream() 
+          .stream()
           .map(d -> new InstantDTO<>(
               DateTimeFormatter.ofPattern("yyyy")
                                .format(d.atZone(ZoneId.systemDefault()).toLocalDateTime())

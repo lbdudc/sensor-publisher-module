@@ -51,6 +51,15 @@ public class InstantProviderResource {
         instantProviderService.findDayInstantsByDate(sensorId, date, pageable), HttpStatus.OK);
   }
 
+  @GetMapping("/{sensorId}/week")
+  public @ResponseBody ResponseEntity<?> findWeekInstantsByDate(
+      @PathVariable("sensorId") String sensorId,
+      @PageableDefault(size = 5) Pageable pageable,
+      @RequestParam("date") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
+    return new ResponseEntity<>(
+        instantProviderService.findWeekInstantsByDate(sensorId, date, pageable), HttpStatus.OK);
+  }
+
   @GetMapping("/{sensorId}/month")
   public @ResponseBody ResponseEntity<?> findMonthInstantsByDate(
       @PathVariable("sensorId") String sensorId,

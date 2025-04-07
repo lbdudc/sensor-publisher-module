@@ -1,4 +1,6 @@
-/*% if (feature.SensorViewer) { %*/
+/*% if (feature.SensorViewer) {
+const hasMovingSensors = data.dataWarehouse.sensors?.find(function(sensor) {
+  return sensor.isMoving === true; }); %*/
 <template>
   <div id="layer-manager">
     /*% if (feature.SV_LayerManager) { %*/
@@ -9,9 +11,7 @@
       :map="map"
     ></layer-manager>
     /*% } %*/
-
     <div id="map-container">
-
       /*% if (feature.SV_FiltersBox) { %*/
       <!-- Aggregation filters box -->
       <filters-box
@@ -24,9 +24,7 @@
         @show_rasters="displayPopulationGrid"
       ></filters-box>
       /*% } %*/
-
       <div ref="map" id="map"></div>
-
       <div v-if="loadingMap" id="loading-div">
         <v-col>
           <v-row justify="center">
@@ -41,7 +39,6 @@
           </v-row>
         </v-col>
       </div>
-
       <no-data-dialog
         v-model="noDataDialog"
         @close="noDataDialog = false"
@@ -76,6 +73,20 @@
         /*% } %*/
       ></information-popup>
       /*% } %*/
+      /*% if(hasMovingSensors) { %*/
+      <div
+        v-if="
+          this.store?.getSelector('TEMPORAL_AGGREGATION')?.value != 'NONE' &&
+          !this.store?.getSelector('SPATIAL_AGGREGATION')?.value
+        "
+        class="routes-selector"
+      >
+        <v-tabs v-model="selectedMapTab" grow class="map-tabs">
+          <v-tab class="custom-tab">{{ $t("filter.measurements") }}</v-tab>
+          <v-tab class="custom-tab">{{ $t("filter.routes") }}</v-tab>
+        </v-tabs>
+      </div>
+      /*% } %*/
       /*% if (feature.SV_TimelineBox) { %*/
       <v-row no-gutters align="end">
         <v-col cols="12">
@@ -94,6 +105,7 @@
       </v-row>
       /*% } %*/
       /*% if (feature.SV_Legend) { %*/
+        /*% if(!hasMovingSensors) { %*/
       <interval-style-legend
         v-if="store"
         :items="styleIntervals"
@@ -104,6 +116,27 @@
         :title="$t('map-views.legend.title')"
         @redraw="onLegendChange(true)"
       ></interval-style-legend>
+        /*% } else { %*/
+      <interval-style-legend
+        v-if="this.store?.getSelector('MEASUREMENTS_FLAG')?.value == 1"
+        :items="styleIntervals"
+        :loading="loadingLegend"
+        :property="currentProperty"
+        :store="store"
+        :legendUnits="propertyUnits"
+        :title="$t('map-views.legend.title')"
+        @redraw="onLegendChange(true)"
+      ></interval-style-legend>
+      <sensor-legend
+        v-else-if="this.store"
+        :items="styleIntervals"
+        :loading="loadingLegend"
+        :property="currentProperty"
+        :store="store"
+        :legendUnits="propertyUnits"
+        :title="$t('map-views.legend.title')"
+      ></sensor-legend>
+        /*% } %*/
       /*% } %*/
     </div>
   </div>
@@ -123,7 +156,9 @@ import {
   createMap,
   loadBaseLayers,
   loadOverlayLayers,
+  /*% if(!hasMovingSensors) { %*/
   reloadSensorsLayer,
+  /*% } %*/
 } from "@/components/sensor-viewer/common/utils/map-layers-management";
 import { createStore } from "magical-state";
 import getSpec from "@/components/sensor-viewer/mapviewer/state/spec-utils.js";
@@ -145,6 +180,10 @@ import instantService from "@/components/sensor-viewer/common/services/instantSe
 import IntervalStyleLegend from "@/components/sensor-viewer/common/components/IntervalStyleLegend";
 /*% } %*/
 import { triggerInstantGetter } from "@/components/sensor-viewer/common/utils/instants-management.js";
+/*% if (hasMovingSensors){ %*/
+import SensorLegend from "@/components/sensor-viewer/common/components/SensorLegend";
+/*% } %*/
+
 import {
   sleep,
   loadUrlState,
@@ -164,6 +203,10 @@ import {
   FILTERS,
   LEGEND,
   FLAGS,
+  /*% if (hasMovingSensors){ %*/
+  TIME_INTERVALS,
+  /*% } %*/
+
 } from "@/components/sensor-viewer/common/utils/const.js";
 
 const minZoom = 12;
@@ -188,6 +231,9 @@ export default {
     /*% } %*/
     /*% if (feature.SV_Legend) { %*/
     IntervalStyleLegend,
+    /*% } %*/
+    /*% if (hasMovingSensors){ %*/
+    SensorLegend,
     /*% } %*/
   },
   props: {
@@ -239,7 +285,9 @@ export default {
       /*% if (feature.SV_P_SensorInfo) { %*/
       sensorId: null,
       /*% } %*/
-
+      /*% if (hasMovingSensors){ %*/
+      selectedMapTab: null,
+      /*% } %*/
     };
   },
   computed: {
@@ -272,6 +320,16 @@ export default {
         }
       }
     },
+    /*% if (hasMovingSensors){ %*/
+    async selectedMapTab(newVal) {
+      if (newVal === 0) {
+        await this.store?.setSelector(FLAGS.MEASUREMENTS, 1, false, true);
+      } else if (newVal === 1) {
+        await this.store?.setSelector(FLAGS.MEASUREMENTS, 0, false, true);
+        await this.store?.setSelector(LEGEND.TYPE, LEGEND.STATIC, false, true);
+      }
+    },
+    /*% } %*/
   },
   mounted() {
     this.maps = maps.maps.map((map, index) => {
@@ -328,23 +386,27 @@ export default {
         ),
         this.onFiltersChange
       );
-
+      /*% if (hasMovingSensors) { %*/
+      this.selectedMapTab =
+      this.store.getSelector(FLAGS.MEASUREMENTS).value == 1 ? 0 : 1;
+      /*% } %*/
       const repo_url = this.spec.repository_url;
       instantService.getLastInstant(repo_url).then((res) => {
         this.lastInstant = res;
       });
 
       loadBaseLayers(this.map, this.mapSelected);
-      /*% if (feature.SV_Popup) { %*/
+      /*% if (!hasMovingSensors) { %*/
+        /*% if (feature.SV_Popup) { %*/
       loadOverlayLayers(
         this.map,
         this.mapSelected,
         this._geoJSONPopupFunction
       );
-      /*% } else { %*/
+        /*% } else { %*/
       loadOverlayLayers(this.map, this.mapSelected, () => {});
+        /*% } %*/
       /*% } %*/
-
       // if real time is active we start the interval
       /*% if (feature.SV_TB_RealTime) { %*/
       if (this.store.objFromObservable[FLAGS.REAL_TIME]) {
@@ -356,7 +418,16 @@ export default {
       await this.onFiltersChange(this.store.objFromObservable);
       /*% } %*/
     },
+
     async onFiltersChange(store) {
+      /*% if (hasMovingSensors) { %*/
+      if (
+        store[AGGREGATIONS.TEMPORAL] == TIME_INTERVALS.RANGE &&
+        (!store[FILTERS.INIT_DATE] || !store[FILTERS.END_DATE])
+      ) {
+        return;
+      }
+      /*% } %*/
       if (!this.avoidMapLoading) this.loadingMap = true;
       // We added sleep 0 to fix a bug with the popup's opening (it took too long to appear)
       await sleep(0);
@@ -364,6 +435,7 @@ export default {
       // Terminate previous request if pending
       controller.abort();
 
+      /*% if (!hasMovingSensors) { %*/
       // Reload sensor geometries if sensor type is dynamic
       if (this.spec?.isMoving) {
         await reloadSensorsLayer(
@@ -373,7 +445,7 @@ export default {
           this._geoJSONPopupFunction
         );
       }
-
+      /*% } %*/
       const mapUpdatePromises = this._updateMap(store);
       const params = createOptionsForRequest(store, this.spec);
       params.properties = [store[AGGREGATIONS.PROPERTY]];
@@ -389,6 +461,7 @@ export default {
         params["spatialFilterId"] = store[FILTERS.SPATIAL];
       }
 
+      /*% if (!hasMovingSensors) { %*/
       return this.dataRepository
         .getData(params, options)
         .then((res) => {
@@ -415,7 +488,40 @@ export default {
         .catch((err) => {
           if (err.message !== "ERR_CANCELED") throw err;
         });
+      /*% } else { %*/
+      return this.dataRepository
+        .getData(params, options)
+        .then(async (res) => {
+          await loadOverlayLayers(
+            this.spec,
+            this.map,
+            this.mapSelected,
+            params,
+            options,
+            this._geoJSONPopupFunction,
+            this.store
+          );
+          const values = res.features.map(
+            (e) =>
+              e.properties[this.store.getSelector(AGGREGATIONS.PROPERTY).value]
+          );
+          this.minMax.min = Math.min(
+            ...values.filter((value) => value !== null && !isNaN(value))
+          );
+          this.minMax.max = Math.max(
+            ...values.filter((value) => value !== null && !isNaN(value))
+          );
+          this.loadingMap = false;
+          Promise.all(mapUpdatePromises).then(
+            async () => await this._updateMapInfo(res, store)
+          );
+        })
+        .catch((err) => {
+          if (err.message !== "ERR_CANCELED") throw err;
+        });
+      /*% } %*/
     },
+
     _handleStatus(store) {
       if (store[FLAGS.RASTERS]) {
         return new RastersView(this.map, this.store, this.$route);
@@ -467,7 +573,13 @@ export default {
         .getLayer()
         .then(async (layer) => {
           const dataObj = {};
+          /*% if (!hasMovingSensors) { %*/
           data.forEach((item) => (dataObj[item.id] = item.data));
+          /*% } else { %*/
+          data.features.forEach((feature) => {
+            dataObj[feature.id] = feature.properties;
+          });
+          /*% } %*/
           layer.eachLayer((subLayer) => {
             const foundedFeatureProps = dataObj[subLayer.feature.id];
             if (foundedFeatureProps) {
@@ -482,16 +594,20 @@ export default {
               subLayer.feature.properties.data = null;
             }
           });
-
+          /*% if (!hasMovingSensors) { %*/
           await this.onLegendChange();
           if (this.popupLayer) {
             this._getFeatureData(this.popupLayer);
           }
+          /*% } else { %*/
+          if (data.features.length > 0) await this.onLegendChange();
+          /*% } %*/
         })
         .finally(() => (this.loadingMap = false));
     },
     /*% if (feature.SV_Popup) { %*/
     _geoJSONPopupFunction(form) {
+      /*% if(!hasMovingSensors){ %*/
       this.popupLoading = true;
       return (layer) => {
         this._getFeatureData(layer).then((res) => {
@@ -504,9 +620,48 @@ export default {
         });
         return this.$refs.informationPopup.$el;
       };
+      /*% } else { %*/
+      return (layer) => {
+        const property = this.store.getSelector(AGGREGATIONS.PROPERTY).value;
+        layer.feature.properties.data = {
+          [property]: layer.feature.properties.data[property],
+        };
+        layer.feature.properties.sensorInfo = null;
+        this.popupLayer = layer;
+        /*% if (feature.SV_P_SensorInfo) { %*/
+        //retrive sensor info
+        this._getFeatureInfo(layer).then((res) => {
+          layer.feature.properties.sensorInfo = res;
+          this.popupForm = form;
+          this.popupLayer = layer;
+          this.popupLoading = false;
+        });
+        /*% } else { %*/
+        this.popupForm = form;
+        this.popupLayer = layer;
+        this.popupLoading = false;
+        /*% } %*/
+        return this.$refs.informationPopup.$el;
+      };
+      /*% } %*/
     },
     /*% } %*/
-    _getFeatureData(layer) {
+
+    /*% if (hasMovingSensors && feature.SV_P_SensorInfo) { %*/
+      _getFeatureInfo(layer) {
+      this.popupLoading = true;
+      const store = this.store.objFromObservable;
+      const options = createOptionsForRequest(store, this.spec);
+      const properties = this.spec.store.properties.map((elem) => elem.value);
+      options.properties = properties;
+      return this.dataRepository
+        .getInfoFromItem(layer.feature.properties.sensor_id, options)
+        .then((res) => {
+          return res;
+        });
+    },
+    /*% } else { %*/
+      _getFeatureData(layer) {
       this.popupLoading = true;
       const store = this.store.objFromObservable;
       const options = createOptionsForRequest(store, this.spec);
@@ -522,6 +677,7 @@ export default {
           this.popupLoading = false;
         });
     },
+    /*% } %*/
     closePopup() {
       this.popupForm = null;
       this.popupLayer = null;
@@ -549,14 +705,20 @@ export default {
     /*% } %*/
     async onLegendChange() {
       this.loadingLegend = true;
-      const store = this.store.objFromObservable;
       const property = await this.store.getSelector(AGGREGATIONS.PROPERTY)
         ?.value;
 
-      let subfix = !this.store.getSelector(AGGREGATIONS.SPATIAL)?.value
+      /*% if (!hasMovingSensors) { %*/
+      const subfix = !this.store.getSelector(AGGREGATIONS.SPATIAL)?.value
         ? "Point"
         : "Polygon";
-
+      /*% } else { %*/
+      const subfix =
+        this.store.getSelector(AGGREGATIONS.TEMPORAL)?.value == "NONE" &&
+        !this.store.getSelector(AGGREGATIONS.SPATIAL)?.value
+          ? "Point"
+          : "Polygon";
+      /*% } %*/
       const intervals = getIntervalStyles(this.store, this.minMax, subfix);
 
       const query = { ms: this.store.exportStoreEncodedURL() };
@@ -578,7 +740,6 @@ export default {
         interval.style.setRadius(newRadius)
       );
       this.map.getVisibleOverlays()[0].setCustomStyle(currentStyle);
-
       this.styleIntervals = interv;
       this.loadingLegend = false;
     },
@@ -730,5 +891,28 @@ export default {
   height: 16px;
   width: 10px;
 }
+
+/*% if (hasMovingSensors) { %*/
+.routes-selector {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
+.map-tabs {
+  height: 36px;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.custom-tab {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+}
+/*% } %*/
 </style>
 /*% } %*/
