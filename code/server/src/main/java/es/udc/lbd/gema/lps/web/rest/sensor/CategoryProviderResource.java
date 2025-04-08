@@ -40,7 +40,7 @@ public class CategoryProviderResource {
       @RequestParam("repoUrl") String repo_url,
       @RequestParam("sensorName") String sensor_name,
       @RequestParam("category") String category,
-      @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime date,
+      @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime date,
       @RequestParam(value = "aggregation", required = false) TemporalAggregation aggregation,
       @RequestParam(value = "sensorId", required = false) String sensorId) {
     return new ResponseEntity<>(

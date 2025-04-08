@@ -21,6 +21,8 @@
         });
   });
   var hasCategoricalDims = dimensions.length > 0;
+  const hasMovingSensors = data.dataWarehouse.sensors?.find(function(sensor) {
+    return sensor.isMoving === true; });
 %*/
 package es.udc.lbd.gema.lps.model.repository.sensor;
 
@@ -41,6 +43,14 @@ import jakarta.persistence.Query;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
+/*% if (hasMovingSensors) { %*/
+import es.udc.lbd.gema.lps.web.rest.custom.FeatureCollectionJSON;
+import es.udc.lbd.gema.lps.web.rest.custom.FeatureJSON;
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.io.ParseException;
+import org.locationtech.jts.io.WKTReader;
+/*% } %*/
 
 @Repository
 public class /*%= normalize(context.id, true) %*/RepositoryImpl implements /*%= normalize(context.id, true) %*/Repository {
@@ -51,6 +61,410 @@ public class /*%= normalize(context.id, true) %*/RepositoryImpl implements /*%= 
 
   private final Logger logger = LoggerFactory.getLogger(/*%= normalize(context.id, true) %*/RepositoryImpl.class);
 
+  /*% if (hasMovingSensors) { %*/
+  @Override
+  public FeatureCollectionJSON getData(
+      Long id,
+      LocalDateTime start,
+      LocalDateTime end,
+      TemporalAggregation temporalAggregation,
+      /*%= normalize(context.id, true) %*/SpatialAggregation spatialAggregation,
+      CalcAggregation calc,
+      String field,
+      List<String> fieldsToQuery,
+      /*%= normalize(context.id, true) %*/SpatialFilter spatialFilter,
+      /*% if (hasCategoricalDims) { %*/
+      String categoryAggregationString,
+      String categoryFilter,
+      String categoryFrom,
+      String categoryTo,
+      /*% } %*/
+      Integer spatialFilterId,
+      String spatialOperation) {
+
+    String selectClause =
+        buildSelectClause(spatialAggregation, temporalAggregation, calc, camelToSnake(field));
+    TemporalAggregation aggLevelBelow = getLevelBelowTemporalAgg(temporalAggregation);
+    String fromClause = buildFromClause(spatialAggregation, spatialFilter, aggLevelBelow);
+    String whereClause =
+        buildWhereClause(
+            id,
+            start,
+            end,
+            aggLevelBelow,
+            spatialAggregation,
+            spatialFilter,
+            spatialFilterId
+            /*% if (hasCategoricalDims) { %*/
+            ,
+            categoryAggregationString,
+            categoryFilter,
+            categoryFrom,
+            categoryTo,
+            /*% } %*/
+            spatialOperation
+            );
+
+    String sqlQueryString = "";
+    if (spatialAggregation == null) {
+      sqlQueryString =
+          selectClause + fromClause + whereClause + buildOrderByClause(id, aggLevelBelow);
+    } else {
+      sqlQueryString =
+          selectClause + fromClause + whereClause + buildGroupByClause(spatialAggregation);
+    }
+
+    logger.debug("SQL QUERY: " + sqlQueryString);
+    Query query = entityManager.createNativeQuery(sqlQueryString);
+    List<Object[]> resultList = query.getResultList();
+    return buildResult(resultList, field);
+  }
+
+  @Override
+  public FeatureCollectionJSON buildResult(List<Object[]> resultList, String field) {
+    List<FeatureJSON> featureList = new ArrayList<>();
+    for (int index = 0; index < resultList.size(); index++) {
+      Object[] row = resultList.get(index);
+      FeatureJSON featureJSON = new FeatureJSON();
+      featureJSON.setId((long) index);
+      featureJSON.setGeometry(getGeometry(row[1].toString()));
+      featureJSON.setType("Feature");
+      featureJSON.setProperties(
+          Map.of(
+              "displayString",
+              row[0].toString(),
+              "sensor_id",
+              row[0].toString(),
+              field.toLowerCase(),
+              row[2].toString()));
+      featureList.add(featureJSON);
+    }
+    FeatureCollectionJSON featureCollectionJSON = new FeatureCollectionJSON();
+    featureCollectionJSON.setType("FeatureCollection");
+    featureCollectionJSON.setFeatures(featureList);
+    return featureCollectionJSON;
+  }
+
+  @Override
+  public String buildSelectClause(
+      /*%= normalize(context.id, true) %*/SpatialAggregation spatialAggregation,
+      TemporalAggregation temporalAggregation,
+      CalcAggregation calc,
+      String field) {
+
+    String selectClause = "SELECT ";
+    String op = getCalcOp(calc);
+    if (spatialAggregation == null) {
+      selectClause = selectClause.concat("sensor_id, geometry, ");
+      op = op.toLowerCase() + "_" + field + ", ";
+      TemporalAggregation aggLevelBelow = getLevelBelowTemporalAgg(temporalAggregation);
+      selectClause = selectClause.concat(op).concat(getTimeBucket(aggLevelBelow)).concat(" ");
+    } else {
+      String spatialAgg = spatialAggregation.toString().toLowerCase();
+      selectClause =
+          selectClause.concat(
+              spatialAgg
+                  + ".id, "
+                  + spatialAgg
+                  + ".geometry, "
+                  + op
+                  + "("
+                  + op.toLowerCase()
+                  + "_"
+                  + field
+                  + ") ");
+    }
+    return selectClause;
+  }
+
+  @Override
+  public String buildFromClause(
+      /*%= normalize(context.id, true) %*/SpatialAggregation spatialAggregation,
+      /*%= normalize(context.id, true) %*/SpatialFilter spatialFilter,
+      TemporalAggregation temporalAggregation) {
+    String fromClause = "FROM ";
+    if (spatialAggregation == null) {
+      String viewName = getViewName(temporalAggregation);
+      fromClause = fromClause.concat("agg" + viewName + "view_table ");
+    } else {
+      String spatialAgg = spatialAggregation.toString().toLowerCase();
+      if (temporalAggregation != null) {
+        String viewName = getViewName(temporalAggregation);
+        fromClause =
+            fromClause.concat(
+                "agg_"
+                    + spatialAgg
+                    + viewName
+                    + "aggregation join t_"
+                    + spatialAgg
+                    + " "
+                    + spatialAgg
+                    + " on aggregation."
+                    + spatialAgg
+                    + "_id = "
+                    + spatialAgg
+                    + ".id ");
+      } else {
+        String viewName = getViewName(TemporalAggregation.MINUTE);
+        fromClause =
+            fromClause.concat(
+                "agg_"
+                    + spatialAgg
+                    + viewName
+                    + "aggregation join t_"
+                    + spatialAgg
+                    + " "
+                    + spatialAgg
+                    + " on aggregation."
+                    + spatialAgg
+                    + "_id = "
+                    + spatialAgg
+                    + ".id ");
+      }
+    }
+    return fromClause;
+  }
+
+  @Override
+  public String buildWhereClause(
+      Long id,
+      LocalDateTime start,
+      LocalDateTime end,
+      TemporalAggregation temporalAggregation,
+      /*%= normalize(context.id, true) %*/SpatialAggregation spatialAggregation,
+      /*%= normalize(context.id, true) %*/SpatialFilter spatialFilter,
+      Integer spatialFilterId
+      /*% if (hasCategoricalDims) { %*/
+      ,
+      String categoryAggregationString,
+      String categoryFilter,
+      String categoryFrom,
+      String categoryTo,
+      /*% } %*/
+      String spatialOperation
+      ) {
+
+    String whereClause = "WHERE ";
+    if (spatialAggregation == null) {
+      String bucket = getTimeBucket(temporalAggregation);
+      whereClause =
+          whereClause.concat(
+              bucket
+                  + ">= '"
+                  + start.toString()
+                  + "' AND "
+                  + bucket
+                  + "< '"
+                  + end.toString()
+                  + "' ");
+      if (id != null) {
+        whereClause = whereClause.concat("AND sensor_id = " + id + " ");
+      }
+    } else {
+      String spatialAgg = spatialAggregation.toString().toLowerCase();
+      if (temporalAggregation == null) {
+        String bucket = getTimeBucket(TemporalAggregation.MINUTE);
+        whereClause =
+            "WHERE "
+                + bucket
+                + " >= '"
+                + start.toString()
+                + "' AND "
+                + bucket
+                + " < '"
+                + end.toString()
+                + "' ";
+
+      } else {
+        String bucket = getTimeBucket(temporalAggregation);
+        whereClause =
+            "WHERE "
+                + bucket
+                + " >= '"
+                + start.toString()
+                + "' AND "
+                + bucket
+                + " < '"
+                + end.toString()
+                + "' ";
+      }
+      if (spatialFilterId != null) {
+        if (spatialOperation != null) {
+          whereClause =
+              whereClause.concat(
+                  "AND aggregation."
+                      + spatialAgg
+                      + "_id IN (SELECT spatial_agg.id FROM t_"
+                      + spatialAgg
+                      + " spatial_agg JOIN t_"
+                      + spatialFilter
+                      + " spatial_filter ON "
+                      + getPostgisOperation(spatialOperation)
+                      + "(spatial_filter.geometry, spatial_agg.geometry) WHERE spatial_filter.id = "
+                      + spatialFilterId
+                      + ") ");
+
+        } else if (spatialAggregation.toString().equals(spatialFilter.toString())) {
+          whereClause = whereClause.concat("AND " + spatialAgg + "_id = " + spatialFilterId + " ");
+        }
+      }
+    }
+    /*% if (hasCategoricalDims) { %*/
+    if (categoryFilter != null) {
+      String categories =
+          getCategories(categoryAggregationString, categoryFilter, categoryFrom, categoryTo);
+      whereClause = whereClause.concat("AND category IN " + categories + " ");
+    }
+    /*% } %*/
+    return whereClause;
+  }
+
+  @Override
+  public String buildGroupByClause(
+      /*%= normalize(context.id, true) %*/SpatialAggregation spatialAggregation) {
+    String groupByClause = "GROUP BY ";
+    if (spatialAggregation == null) {
+      groupByClause = groupByClause.concat("sensor_id ");
+    } else {
+      String spatialAgg = spatialAggregation.toString().toLowerCase();
+      groupByClause = groupByClause.concat(spatialAgg + ".geometry, " + spatialAgg + ".id ");
+    }
+    return groupByClause;
+  }
+
+  @Override
+  public String buildOrderByClause(Long id, TemporalAggregation temporalAggregation) {
+    String orderByClause = "ORDER BY ";
+    String timeBucket = getTimeBucket(temporalAggregation);
+    orderByClause = orderByClause.concat("sensor_id, ").concat(timeBucket);
+    return orderByClause;
+  }
+
+  /*% if (hasCategoricalDims) { %*/
+  private String getCategories(
+      String categoryAggregationString,
+      String categoryFilter,
+      String categoryFrom,
+      String categoryTo) {
+
+    String categoryQuery =
+        "SELECT id FROM t_category_" + entityName + " WHERE " + categoryAggregationString + " = ";
+
+    if (categoryFrom != null && categoryTo != null) {
+      String subquery =
+          "( SELECT id FROM t_"
+              + categoryAggregationString
+              + "_range_"
+              + entityName
+              + " WHERE \"from\" = "
+              + categoryFrom
+              + " and \"to\" = "
+              + categoryTo
+              + ")";
+      categoryQuery = categoryQuery.concat(subquery);
+    } else {
+      categoryQuery = categoryQuery.concat("'" + categoryFilter + "'");
+    }
+
+    Query query = entityManager.createNativeQuery(categoryQuery);
+    List<Object[]> resultList = query.getResultList();
+    String categories = resultList.toString().replace('[', '(').replace(']', ')');
+
+    if (resultList.size() > 0) {
+      return categories;
+    } else {
+      return null;
+    }
+  }
+  /*% } %*/
+
+  private String getViewName(TemporalAggregation temporalAggregation) {
+    String viewName = "";
+    if (temporalAggregation == null) {
+      viewName = "_interval_".concat(entityName);
+    } else if (temporalAggregation.equals(TemporalAggregation.SECOND)) {
+      viewName = "_second_".concat(entityName);
+    } else if (temporalAggregation.equals(TemporalAggregation.MINUTE)) {
+      viewName = "_minute_".concat(entityName);
+    } else if (temporalAggregation.equals(TemporalAggregation.HOUR)) {
+      viewName = "_hour_".concat(entityName);
+    } else if (temporalAggregation.equals(TemporalAggregation.DAY)) {
+      viewName = "_day_".concat(entityName);
+    } else if (temporalAggregation.equals(TemporalAggregation.WEEK)) {
+      viewName = "_week_".concat(entityName);
+    } else if (temporalAggregation.equals(TemporalAggregation.MONTH)) {
+      viewName = "_month_".concat(entityName);
+    } else if (temporalAggregation.equals(TemporalAggregation.YEAR)) {
+      viewName = "_year_".concat(entityName);
+    } else {
+      viewName = "_interval_".concat(entityName);
+    }
+    return viewName.concat(" ");
+  }
+
+  private TemporalAggregation getLevelBelowTemporalAgg(TemporalAggregation temporalAggregation) {
+    TemporalAggregation agg = null;
+    if (temporalAggregation == null) {
+      agg = temporalAggregation;
+    } else if (temporalAggregation.equals(TemporalAggregation.YEAR)) {
+      agg = TemporalAggregation.MONTH;
+    } else if (temporalAggregation.equals(TemporalAggregation.MONTH)) {
+      agg = TemporalAggregation.WEEK;
+    } else if (temporalAggregation.equals(TemporalAggregation.WEEK)) {
+      agg = TemporalAggregation.DAY;
+    } else if (temporalAggregation.equals(TemporalAggregation.DAY)) {
+      agg = TemporalAggregation.HOUR;
+    } else if (temporalAggregation.equals(TemporalAggregation.HOUR)) {
+      agg = TemporalAggregation.MINUTE;
+    } else {
+      agg = temporalAggregation;
+    }
+    return agg;
+  }
+
+  private List<DataDTO> buildHistogram(List<Object[]> resultList, List<String> fieldsToQuery) {
+    List<DataDTO> result = new ArrayList<>();
+    for (Object[] row : resultList) {
+      DataDTO dataDTO = new DataDTO();
+      Map<String, Object> data = new HashMap<>();
+      for (int i = 0; i < row.length; i++) {
+        if (i == 0) {
+          dataDTO.setId(row[i].toString());
+        } else {
+          data.put(fieldsToQuery.get(i - 1).toLowerCase(), row[i]);
+          dataDTO.setData(data);
+        }
+      }
+      dataDTO.setData(data);
+      result.add(dataDTO);
+    }
+
+    return result;
+  }
+
+  private Geometry getGeometry(String geomAsString) {
+    try {
+      geomAsString = geomAsString.substring(geomAsString.indexOf(";") + 1);
+      WKTReader reader = new WKTReader(new GeometryFactory());
+      return reader.read(geomAsString);
+    } catch (ParseException e) {
+      e.printStackTrace();
+      return null;
+    }
+  }
+
+  private String getPostgisOperation(String spatialOperation) {
+    switch (spatialOperation) {
+      case "CONTAINS":
+        return "ST_Contains";
+      case "INTERSECTS":
+        return "ST_Intersects";
+      default:
+        return null;
+    }
+  }
+
+  /*% } else { %*/
   @Override
   public List<DataDTO> getData(
       Long id,
@@ -135,13 +549,7 @@ public class /*%= normalize(context.id, true) %*/RepositoryImpl implements /*%= 
     }
 
     String op = getCalcOp(calc);
-
-    if (temporalAggregation != null) {
-      op = op + "(" + op.toLowerCase() + "_" + field + ") ";
-    } else {
-      op = op + "(" + field + ") ";
-    }
-
+    op = op + "(" + op.toLowerCase() + "_" + field + ") ";
     selectClause = selectClause.concat(op);
     return selectClause;
   }
@@ -251,6 +659,89 @@ public class /*%= normalize(context.id, true) %*/RepositoryImpl implements /*%= 
     return groupByClause;
   }
 
+  /*% if (hasCategoricalDims) { %*/
+  private String getCategories(
+      String categoryAggregationString,
+      String categoryFilter,
+      String categoryFrom,
+      String categoryTo) {
+
+    String categoryQuery =
+        "SELECT id FROM t_category_" + entityName + " WHERE " + categoryAggregationString + " = ";
+
+    if (categoryFrom != null && categoryTo != null) {
+      String subquery =
+          "( SELECT id FROM t_"
+              + categoryAggregationString
+              + "_range_"
+              + entityName
+              + " WHERE \"from\" = "
+              + categoryFrom
+              + " and \"to\" = "
+              + categoryTo
+              + ")";
+      categoryQuery = categoryQuery.concat(subquery);
+    } else {
+      categoryQuery = categoryQuery.concat("'" + categoryFilter + "'");
+    }
+
+    Query query = entityManager.createNativeQuery(categoryQuery);
+    List<Object[]> resultList = query.getResultList();
+    String categories = resultList.toString().replace('[', '(').replace(']', ')');
+
+    if (resultList.size() > 0) {
+      return categories;
+    } else {
+      return null;
+    }
+  }
+  /*% } %*/
+
+  private String getViewName(TemporalAggregation temporalAggregation) {
+    String viewName = "";
+    if (temporalAggregation == null) {
+      viewName = "agg_interval_".concat(entityName);
+    } else if (temporalAggregation.equals(TemporalAggregation.SECOND)) {
+      viewName = "agg_second_".concat(entityName);
+    } else if (temporalAggregation.equals(TemporalAggregation.MINUTE)) {
+      viewName = "agg_minute_".concat(entityName);
+    } else if (temporalAggregation.equals(TemporalAggregation.HOUR)) {
+      viewName = "agg_hour_".concat(entityName);
+    } else if (temporalAggregation.equals(TemporalAggregation.DAY)) {
+      viewName = "agg_day_".concat(entityName);
+    } else if (temporalAggregation.equals(TemporalAggregation.WEEK)) {
+      viewName = "agg_week_".concat(entityName);
+    } else if (temporalAggregation.equals(TemporalAggregation.MONTH)) {
+      viewName = "agg_month_".concat(entityName);
+    } else if (temporalAggregation.equals(TemporalAggregation.YEAR)) {
+      viewName = "agg_year_".concat(entityName);
+    } else {
+      viewName = "agg_interval_".concat(entityName);
+    }
+    return viewName.concat(" ");
+  }
+
+  private List<DataDTO> buildHistogram(List<Object[]> resultList, List<String> fieldsToQuery) {
+    List<DataDTO> result = new ArrayList<>();
+    for (Object[] row : resultList) {
+      DataDTO dataDTO = new DataDTO();
+      Map<String, Object> data = new HashMap<>();
+      for (int i = 0; i < row.length; i++) {
+        if (i == 0) {
+          dataDTO.setId(row[i].toString());
+        } else {
+          data.put(fieldsToQuery.get(i - 1).toLowerCase(), row[i]);
+          dataDTO.setData(data);
+        }
+      }
+      dataDTO.setData(data);
+      result.add(dataDTO);
+    }
+
+    return result;
+  }
+  /*% } %*/
+
   @Override
   public List<DataDTO> getHistogramDataBySensorId(
       Long id,
@@ -291,13 +782,20 @@ public class /*%= normalize(context.id, true) %*/RepositoryImpl implements /*%= 
             categoryFilter,
             categoryFrom,
             categoryTo
-            /*% } %*/);
-
+            /*% } %*/
+            /*% if (hasMovingSensors) { %*/
+            ,null
+            /*% } %*/
+            );
     String histogramQuery = selectClause.concat(fromClause).concat(whereClause);
-
     String groupByClause =
-        "GROUP BY bucket_" + getHistogramTemporalAgg(temporalAggregation).toString().toLowerCase();
+        "GROUP BY bucket_" + getHistogramTemporalAgg(temporalAggregation).toString().toLowerCase() +" ";
     histogramQuery = histogramQuery.concat(groupByClause);
+
+    String orderByClause =
+        "ORDER BY bucket_" + getHistogramTemporalAgg(temporalAggregation).toString().toLowerCase();
+    histogramQuery = histogramQuery.concat(orderByClause);
+
     logger.debug("SQL HISTOGRAM QUERY: " + histogramQuery);
 
     Query query = entityManager.createNativeQuery(histogramQuery);
@@ -305,45 +803,6 @@ public class /*%= normalize(context.id, true) %*/RepositoryImpl implements /*%= 
     List<DataDTO> result = buildHistogram(resultList, fieldsToQuery);
     return result;
   }
-
-  /*PRIVATE METHODS */
-  /*% if (hasCategoricalDims) { %*/
-  private String getCategories(
-      String categoryAggregationString,
-      String categoryFilter,
-      String categoryFrom,
-      String categoryTo) {
-
-    String categoryQuery =
-        "SELECT id FROM t_category_" + entityName + " WHERE " + categoryAggregationString + " = ";
-
-    if (categoryFrom != null && categoryTo != null) {
-      String subquery =
-          "( SELECT id FROM t_"
-              + categoryAggregationString
-              + "_range_"
-              + entityName
-              + " WHERE \"from\" = "
-              + categoryFrom
-              + " and \"to\" = "
-              + categoryTo
-              + ")";
-      categoryQuery = categoryQuery.concat(subquery);
-    } else {
-      categoryQuery = categoryQuery.concat("'" + categoryFilter + "'");
-    }
-
-    Query query = entityManager.createNativeQuery(categoryQuery);
-    List<Object[]> resultList = query.getResultList();
-    String categories = resultList.toString().replace('[', '(').replace(']', ')');
-
-    if (resultList.size() > 0) {
-      return categories;
-    } else {
-      return null;
-    }
-  }
-  /*% } %*/
 
   private String getCalcOp(CalcAggregation calc) {
     String op = "";
@@ -359,34 +818,10 @@ public class /*%= normalize(context.id, true) %*/RepositoryImpl implements /*%= 
     return op;
   }
 
-  private String getViewName(TemporalAggregation temporalAggregation) {
-    String viewName = "";
-    if (temporalAggregation == null) {
-      viewName = "t_" + entityName + "_measurement";
-    } else if (temporalAggregation.equals(TemporalAggregation.SECOND)) {
-      viewName = "agg_second_".concat(entityName);
-    } else if (temporalAggregation.equals(TemporalAggregation.MINUTE)) {
-      viewName = "agg_minute_".concat(entityName);
-    } else if (temporalAggregation.equals(TemporalAggregation.HOUR)) {
-      viewName = "agg_hour_".concat(entityName);
-    } else if (temporalAggregation.equals(TemporalAggregation.DAY)) {
-      viewName = "agg_day_".concat(entityName);
-    } else if (temporalAggregation.equals(TemporalAggregation.WEEK)) {
-      viewName = "agg_week_".concat(entityName);
-    } else if (temporalAggregation.equals(TemporalAggregation.MONTH)) {
-      viewName = "agg_month_".concat(entityName);
-    } else if (temporalAggregation.equals(TemporalAggregation.YEAR)) {
-      viewName = "agg_year_".concat(entityName);
-    } else {
-      viewName = "t_" + entityName + "_measurement";
-    }
-    return viewName.concat(" ");
-  }
-
   private String getTimeBucket(TemporalAggregation temporalAggregation) {
     String bucket = "";
     if (temporalAggregation == null) {
-      bucket = "date ";
+      bucket = "bucket_interval ";
     } else if (temporalAggregation.equals(TemporalAggregation.SECOND)) {
       bucket = "bucket_second ";
     } else if (temporalAggregation.equals(TemporalAggregation.MINUTE)) {
@@ -402,7 +837,7 @@ public class /*%= normalize(context.id, true) %*/RepositoryImpl implements /*%= 
     } else if (temporalAggregation.equals(TemporalAggregation.YEAR)) {
       bucket = "bucket_year ";
     } else {
-      bucket = "date ";
+      bucket = "bucket_interval ";
     }
     return bucket;
   }
@@ -413,6 +848,8 @@ public class /*%= normalize(context.id, true) %*/RepositoryImpl implements /*%= 
       agg = TemporalAggregation.MONTH;
     } else if (temporalAggregation.equals(TemporalAggregation.MONTH)) {
       agg = TemporalAggregation.DAY;
+    } else if (temporalAggregation.equals(TemporalAggregation.WEEK)) {
+      agg = TemporalAggregation.DAY;
     } else if (temporalAggregation.equals(TemporalAggregation.DAY)) {
       agg = TemporalAggregation.HOUR;
     } else {
@@ -422,9 +859,9 @@ public class /*%= normalize(context.id, true) %*/RepositoryImpl implements /*%= 
   }
 
   private String getHistogramFields(
-      List<String> fieldsToQuery,
-      /*%= normalize(context.id, true) %*/SpatialAggregation spatialAggregation,
-      CalcAggregation calc) {
+    List<String> fieldsToQuery,
+    /*%= normalize(context.id, true) %*/SpatialAggregation spatialAggregation,
+    CalcAggregation calc) {
     String fieldsAsString = "";
     for (int i = 0; i < fieldsToQuery.size(); i++) {
       String field = getCalcOp(calc).toLowerCase() + "_" + camelToSnake(fieldsToQuery.get(i));
@@ -439,26 +876,6 @@ public class /*%= normalize(context.id, true) %*/RepositoryImpl implements /*%= 
     return fieldsAsString;
   }
 
-  private List<DataDTO> buildHistogram(List<Object[]> resultList, List<String> fieldsToQuery) {
-    List<DataDTO> result = new ArrayList<>();
-    for (Object[] row : resultList) {
-      DataDTO dataDTO = new DataDTO();
-      Map<String, Object> data = new HashMap<>();
-      for (int i = 0; i < row.length; i++) {
-        if (i == 0) {
-          dataDTO.setId(row[i].toString());
-        } else {
-          data.put(fieldsToQuery.get(i - 1).toLowerCase(), row[i]);
-          dataDTO.setData(data);
-        }
-      }
-      dataDTO.setData(data);
-      result.add(dataDTO);
-    }
-
-    return result;
-  }
-
   private String camelToSnake(String camelCaseString) {
     if (camelCaseString == null || camelCaseString.isEmpty()) {
       return camelCaseString;
@@ -466,4 +883,5 @@ public class /*%= normalize(context.id, true) %*/RepositoryImpl implements /*%= 
     String snakeCaseString = camelCaseString.replaceAll("([a-z])([A-Z]+)", "$1_$2").toLowerCase();
     return snakeCaseString;
   }
+
 }

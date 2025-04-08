@@ -21,6 +21,8 @@
         });
   });
   var hasCategoricalDims = dimensions.length > 0;
+  const hasMovingSensors = data.dataWarehouse.sensors?.find(function(sensor) {
+    return sensor.isMoving === true; });
 %*/
 package es.udc.lbd.gema.lps.model.repository.sensor;
 
@@ -36,9 +38,12 @@ import es.udc.lbd.gema.lps.model.domain.sensor./*%= normalize(context.id, true) 
 /*%if (feature.SV_P_SensorInfo){ %*/
 import es.udc.lbd.gema.lps.model.service.exceptions.NotFoundException;
 /*% } %*/
+/*% if (hasMovingSensors) { %*/
+import es.udc.lbd.gema.lps.web.rest.custom.FeatureCollectionJSON;
+/*% } %*/
 
 public interface /*%= normalize(context.id, true) %*/Repository {
-  List<DataDTO> getData(
+  /*% if (hasMovingSensors) { %*/ FeatureCollectionJSON /*% } else { %*/ List<DataDTO> /*% } %*/ getData(
     Long id,
     LocalDateTime start,
     LocalDateTime end,
@@ -54,9 +59,13 @@ public interface /*%= normalize(context.id, true) %*/Repository {
     String categoryFrom,
     String categoryTo,
     /*% } %*/
-    Integer spatialFilterId);
+    Integer spatialFilterId
+    /*% if (hasMovingSensors) { %*/
+    ,String spatialOperation
+    /*% } %*/
+    );
 
-  List<DataDTO> buildResult(
+  /*% if (hasMovingSensors){ %*/ FeatureCollectionJSON /*% } else { %*/ List<DataDTO> /*% } %*/ buildResult(
     List<Object[]> resultList,
     String field);
 
@@ -85,11 +94,19 @@ public interface /*%= normalize(context.id, true) %*/Repository {
     String categoryFilter,
     String categoryFrom,
     String categoryTo
-    /*% } %*/);
+    /*% } %*/
+    /*% if (hasMovingSensors) { %*/
+    ,String spatialOperation
+    /*% } %*/
+    );
 
   String buildGroupByClause(
     /*%= normalize(context.id, true) %*/SpatialAggregation spatialAggregation);
 
+  /*% if (hasMovingSensors) { %*/
+  String buildOrderByClause(Long id, TemporalAggregation temporalAggregation);
+
+  /*% } %*/
   List<DataDTO> getHistogramDataBySensorId(
     Long id,
     LocalDateTime start,

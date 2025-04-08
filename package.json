@@ -1,7 +1,7 @@
 {
   "name": "@lbdudc/sensorpublisher-module",
   "type": "module",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "homepage": "https://github.com/lbdudc/sensor-publisher-module.git",
   "description": "Spl Module with annotated code for building IoT Datawarehouse",
   "keywords": [

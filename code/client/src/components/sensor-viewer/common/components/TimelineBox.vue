@@ -1,6 +1,6 @@
 /*% if (feature.SensorViewer && feature.SV_TimelineBox) { %*/
 <template>
-  <v-card dense class="card" id="timeline-box" v-if="store">
+  <v-card dense class="card" id="timeline-box" v-if="store && temporalElement !== 'RANGE'">
     <v-btn class="hide-btn" @click="hideBar()">
       <v-icon v-if="!showTimeLine">mdi-calendar-filter-outline</v-icon>
       <v-icon v-else>mdi-menu-down</v-icon>
@@ -35,7 +35,7 @@
             @change="setDateFilter"
           ></m-selector>
           <m-date-filter
-            v-if="temporalElement === 'NONE' || temporalElement === 'DAY' || temporalElement === 'HOUR'"
+            v-if="temporalElement === 'NONE' || temporalElement === 'WEEK' || temporalElement === 'DAY' || temporalElement === 'HOUR'"
             /*% if (feature.SV_TB_RealTime) { %*/
             :disabled="loading || rTCheckbox"
             :hideLoading="rTCheckbox"
@@ -43,7 +43,7 @@
             :disabled="loading"
             /*% } %*/
             :min-value="minValue"
-            :type="temporalElement === 'DAY' ? 'month' : 'date'"
+            :type="temporalElement === 'DAY' || temporalElement === 'WEEK' ? 'month' : 'date'"
             :store="store"
             :i18n="this.$t"
             :firstDayOfWeek="1"

@@ -35,6 +35,8 @@
         });
   });
   spatialDims = [...new Set(spatialDims)];
+  const hasMovingSensors = data.dataWarehouse.sensors?.find(function(sensor) {
+    return sensor.isMoving === true; });
 %*/
 package es.udc.lbd.gema.lps.model.service.sensor;
 
@@ -70,6 +72,9 @@ import es.udc.lbd.gema.lps.model.service.dto./*%= dim %*/FullDTO;
 import es.udc.lbd.gema.lps.model.service./*%= dim %*/Service;
 /*% }); %*/
 import es.udc.lbd.gema.lps.model.domain.sensor./*%= normalize(context.id, true) %*/SpatialAggregation;
+/*% if (hasMovingSensors) { %*/
+import es.udc.lbd.gema.lps.web.rest.custom.FeatureCollectionJSON;
+/*% } %*/
 
 @Service
 @Transactional(readOnly = true, rollbackFor = Exception.class)
@@ -86,9 +91,13 @@ public class /*%= normalize(context.id, true) %*/ServiceImpl implements /*%= nor
 
   /*% }); %*/
   @Override
-  public List<DataDTO> getData(/*%= normalize(context.id, true) %*/StateRequestDto params) {
+  public /*% if (hasMovingSensors) { %*/FeatureCollectionJSON/*% } else { %*/List<DataDTO>/*% } %*/ getData(/*%= normalize(context.id, true) %*/StateRequestDto params) {
     return /*%= normalize(context.id, true) %*/Repository.getData(
+      /*% if (hasMovingSensors) { %*/
+      params.getSensorFilter(),
+      /*% } else { %*/
       null,
+      /*% } %*/
       getStart(params),
       getEnd(params),
       params.getTemporalAggregation(),
@@ -103,9 +112,14 @@ public class /*%= normalize(context.id, true) %*/ServiceImpl implements /*%= nor
       params.getCategoryFrom(),
       params.getCategoryTo(),
       /*% } %*/
-      params.getSpatialFilterId());
+      params.getSpatialFilterId()
+      /*% if (hasMovingSensors) { %*/
+      ,params.getSpatialOperation()
+      /*% } %*/
+      );
   }
 
+  /*% if (!hasMovingSensors){ %*/
   @Override
   public DataDTO getData(Long id, /*%= normalize(context.id, true) %*/StateRequestDto params)/*% if (feature.SV_P_SensorInfo) { %*/ throws NotFoundException /*% } %*/ {
 
@@ -156,6 +170,23 @@ public class /*%= normalize(context.id, true) %*/ServiceImpl implements /*%= nor
     return result;
   }
 
+  /*% } %*/
+  /*% if (hasMovingSensors && feature.SV_P_SensorInfo) { %*/
+  @Override
+  public Object getInfo(Long id, /*%= normalize(context.id, true) %*/StateRequestDto params) throws NotFoundException {
+    if (params.getSpatialAggregation() == null) {
+      return /*%= normalize(context.id, true) %*/EntityService.get(id);
+    } else {
+      /*% spatialDims.forEach(function(dim, idx) { %*/
+      if (params.getSpatialAggregation().equals(/*%= normalize(context.id, true) %*/SpatialAggregation./*%= dim %*/)) {
+        return /*%= dim.toLowerCase() %*/Service.get(id);
+      }
+      /*% }); %*/
+      return null;
+    }
+  }
+
+  /*% } %*/
   @Override
   public List<DataDTO> getDataHistogram(Long id, /*%= normalize(context.id, true) %*/StateRequestDto params) {
 

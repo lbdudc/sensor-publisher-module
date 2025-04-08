@@ -58,9 +58,11 @@ export function generateLegend(intervals, property, store, map, styles) {
   const changedCustom =
     !!store.getSelector("MIN").value && !!store.getSelector("MAX").value;
 
-  let styleId = isPolygon
-    ? store.objFromObservable["PROPERTY_AGGREGATION"] + "_POLYGON"
-    : store.objFromObservable["PROPERTY_AGGREGATION"];
+    const styleId =
+    store.objFromObservable["MEASUREMENTS_FLAG"] === 0
+      ? "randomColorsStyle"
+      : store.objFromObservable["PROPERTY_AGGREGATION"] +
+        (isPolygon ? "_POLYGON" : "");
 
   if (legendType === "STATIC") {
     map.getVisibleOverlays()[0].setStyle(styleId);

@@ -1,4 +1,6 @@
-/*% if (feature.SensorViewer) { %*/
+/*% if (feature.SensorViewer) {
+const hasMovingSensors = data.dataWarehouse.sensors?.find(function(sensor) {
+return sensor.isMoving === true; }); %*/
 <template>
   <div class="pa-0 ma-0">
     <v-dialog v-model="dialog" fullscreen transition="dialog-bottom-transition">
@@ -387,7 +389,14 @@ export default {
   },
   methods: {
     async retrieveHistogramData(histId, options) {
-      return this.histogramGetData(this.layer.feature.id, options).then(
+      return this.histogramGetData(
+        /*% if(hasMovingSensors){ %*/
+        this.layer.feature.properties.sensor_id,
+        /*% } else { %*/
+        this.layer.feature.id,
+        /*% } %*/
+         options
+        ).then(
         (res) => {
           this.datasets?.push({ id: histId, data: res });
         }
@@ -419,6 +428,8 @@ export default {
         case TIME_INTERVALS.DAY:
           return `${hours}:${minutes}`;
         case TIME_INTERVALS.MONTH:
+          return `${day}/${month}`;
+        case TIME_INTERVALS.WEEK:
           return `${day}/${month}`;
         case TIME_INTERVALS.YEAR:
           return `${month}/${year}`;
@@ -563,7 +574,13 @@ export default {
           case TIME_INTERVALS.DAY:
             currentDate.setHours(currentDate.getHours() + 1);
             break;
+          case TIME_INTERVALS.WEEK:
+            currentDate.setDate(currentDate.getDate() + 1);
+            break;
           case TIME_INTERVALS.MONTH:
+            currentDate.setDate(currentDate.getDate() + 1);
+            break;
+          case TIME_INTERVALS.WEEK:
             currentDate.setDate(currentDate.getDate() + 1);
             break;
           case TIME_INTERVALS.YEAR:
@@ -585,10 +602,11 @@ export default {
       for (let i = 0; i < selectedCategories.length; i++) {
         let cat = selectedCategories[i];
         let options = { ...this.store };
-        if (options.categoryFrom) {
+        if (cat.from) {
           //agg categórica con rango
           options.categoryFrom = cat.from;
           options.categoryTo = cat.to;
+          options.categoryFilter = cat.label;
         } else {
           //agg categórica sin rango
           options.categoryFilter = cat.label;

@@ -10,6 +10,8 @@
       });
   });
   var hasCategoricalDims = dimensions.length > 0;
+  const hasMovingSensors = data.dataWarehouse.sensors?.find(function(sensor) {
+  return sensor.isMoving === true; });
 %*/
 import filterService from "@/components/sensor-viewer/common/services/filterService";
 import instantService from "@/components/sensor-viewer/common/services/instantService";
@@ -30,6 +32,9 @@ const createGetValuesFunction = (spec) => {
   const categoryItems = spec.store.category;
   /*% } %*/
   const legendItems = spec.store.legend;
+  /*% if(hasMovingSensors) { %*/
+  const spatialOperationItems = spec.store.spatial_operation;
+  /*% } %*/
 
   // override the function logic to add property aggregation items
   return function getValuesFunction(propId, params, store) {
@@ -58,8 +63,7 @@ const createGetValuesFunction = (spec) => {
           params,
           repo_url,
           sensor_name,
-          categoryItems,
-          store
+          categoryItems
         );
       /*% } %*/
       case "PAGE_FILTER":
@@ -79,6 +83,12 @@ const createGetValuesFunction = (spec) => {
         );
       case "LEGEND_TYPE":
         return new Promise((resolve) => resolve(legendItems));
+      /*% if (hasMovingSensors) { %*/
+      case "SPATIAL_OPERATION":
+        return new Promise((resolve) => resolve(spatialOperationItems));
+      case "SENSOR_FILTER":
+        return filterService.getSensorFilterItems();
+      /*% } %*/
     }
   };
 };

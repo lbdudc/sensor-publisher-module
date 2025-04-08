@@ -1,5 +1,4 @@
-/*% if (feature.SensorViewer) { %*/
-/*%
+/*% if (feature.SensorViewer) {
   const dimensions = [];
   data.dataWarehouse.sensors.forEach(function(sensor) {
     const dims = sensor.dimensions;
@@ -10,6 +9,8 @@
       });
   });
   var hasCategoricalDims = dimensions.length > 0;
+  const hasMovingSensors = data.dataWarehouse.sensors?.find(function(sensor) {
+  return sensor.isMoving === true; });
 %*/
 import { calculateStartEnd } from "./instants-management.js";
 /*% if (hasCategoricalDims) { %*/
@@ -99,6 +100,9 @@ function createOptionsForRequest(store, spec) {
     categoryAggregation: store[AGGREGATIONS.CATEGORY],
     categoryFilter: store[FILTERS.CATEGORY],
     ...calculateCategoryRangeValues(store, spec),
+    /*% } if(hasMovingSensors) { %*/
+    sensorFilter: store[FILTERS.SENSOR],
+    spatialOperation: store[FILTERS.SPATIAL_OPERATION],
     /*% } %*/
     ...calculateStartEnd(store),
   };

@@ -1,5 +1,4 @@
-###< if (feature.SensorViewer) { >###
-###<
+###< if (feature.SensorViewer) {
   const dimensions = [];
   data.dataWarehouse.sensors.forEach(function(sensor) {
     const dims = sensor.dimensions;
@@ -10,6 +9,8 @@
       });
   });
   var hasCategoricalDims = dimensions.length > 0;
+  const hasMovingSensors = data.dataWarehouse.sensors?.find(function(sensor) {
+    return sensor.isMoving === true; });
 >###
 [
   {
@@ -113,5 +114,37 @@
     "id": "MAX",
     "actions": []
   }
+  ###< if (hasMovingSensors) { >###
+  ,{
+    "id": "SPATIAL_OPERATION",
+    "setItemsOnMounted": true,
+    "triggerCallback": true,
+    "label": "aggregation.spatial.operation.label",
+    "actions":[]
+  },
+  {
+    "id": "INIT_DATE_FILTER",
+    "label": "filter.init-date",
+    "triggerCallback": true
+  },
+  {
+    "id": "END_DATE_FILTER",
+    "label": "filter.end-date",
+    "triggerCallback": true
+  },
+  {
+    "id": "SENSOR_FILTER",
+    "label": "filter.sensor",
+    "setItemsOnMounted": true,
+    "triggerCallback": true,
+    "actions": []
+  },
+  {
+    "id": "MEASUREMENTS_FLAG",
+    "triggerCallback": true,
+    "setItemsOnMounted": true,
+    "actions":[]
+  }
+  ###< } >###
 ]
 ###< } >###

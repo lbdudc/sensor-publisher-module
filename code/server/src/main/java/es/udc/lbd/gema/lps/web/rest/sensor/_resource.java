@@ -8,6 +8,11 @@
       };
     });
 %*/
+/*%
+const hasMovingSensors = data.dataWarehouse.sensors?.find(function(sensor) {
+    return sensor.isMoving === true; });
+%*/
+
 package es.udc.lbd.gema.lps.web.rest.sensor;
 
 import org.slf4j.Logger;
@@ -25,6 +30,9 @@ import es.udc.lbd.gema.lps.model.service.dto.sensor.DataDTO;
 import jakarta.inject.Inject;
 import es.udc.lbd.gema.lps.model.service.sensor./*%= normalize(context.id, true) %*/Service;
 import es.udc.lbd.gema.lps.model.service.dto.sensor./*%= normalize(context.id, true) %*/StateRequestDto;
+/*% if (hasMovingSensors) { %*/
+import es.udc.lbd.gema.lps.web.rest.custom.FeatureCollectionJSON;
+/*% } %*/
 
 @RestController
 @RequestMapping(/*%= normalize(context.id, true) %*/Resource./*%= camelToSnakeCase(normalize(context.id)).toUpperCase() %*/_RESOURCE_URL)
@@ -39,17 +47,28 @@ public class /*%= normalize(context.id, true) %*/Resource {
 
 
     @PostMapping("/data")
-    public ResponseEntity<List<DataDTO>> getData(@RequestBody /*%= normalize(context.id, true) %*/StateRequestDto params) {
+    public ResponseEntity</*% if (hasMovingSensors) { %*/FeatureCollectionJSON/*% } else { %*/List<DataDTO>/*% } %*/> getData(@RequestBody /*%= normalize(context.id, true) %*/StateRequestDto params) {
       return new ResponseEntity<>(/*%= normalize(context.id) %*/Service.getData(params), HttpStatus.OK);
     }
 
+    /*% if (!hasMovingSensors) { %*/
     @PostMapping("/{id}/data")
     public ResponseEntity<DataDTO> getData(@PathVariable Long id, @RequestBody /*%= normalize(context.id, true) %*/StateRequestDto params)
       throws NotFoundException {
       return new ResponseEntity<>(/*%= normalize(context.id) %*/Service.getData(id, params), HttpStatus.OK);
     }
 
-     @PostMapping("/{id}/data/histogram")
+    /*% } %*/
+    /*% if(hasMovingSensors && feature.SV_P_SensorInfo) { %*/
+    @PostMapping("/{id}/info")
+    public ResponseEntity<Object> getData(
+        @PathVariable Long id, @RequestBody /*%= normalize(context.id, true) %*/StateRequestDto params)
+        throws NotFoundException {
+      return new ResponseEntity<>(/*%= normalize(context.id) %*/Service.getInfo(id, params), HttpStatus.OK);
+    }
+
+    /*% } %*/
+    @PostMapping("/{id}/data/histogram")
     public ResponseEntity<List<DataDTO>> getHistogramData(
       @PathVariable Long id, @RequestBody /*%= normalize(context.id, true) %*/StateRequestDto params) throws NotFoundException {
       return new ResponseEntity<>(/*%= normalize(context.id) %*/Service.getDataHistogram(id, params), HttpStatus.OK);

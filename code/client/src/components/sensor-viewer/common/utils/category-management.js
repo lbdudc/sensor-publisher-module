@@ -32,7 +32,7 @@ function calculateCategoryRangeValues(store, spec) {
 
   const calcRange = calcCat.categories.find(
     (range) =>
-      range.label.toLowerCase() == store[FILTERS.CATEGORY].toLowerCase()
+      range.label.toLowerCase() == store[FILTERS.CATEGORY]?.toLowerCase()
   );
 
   if (calcRange == null)

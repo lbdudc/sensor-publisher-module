@@ -8,6 +8,11 @@
       };
     });
 %*/
+/*%
+const hasMovingSensors = data.dataWarehouse.sensors?.find(function(sensor) {
+return sensor.isMoving === true; });
+%*/
+
 import { HTTP } from "@/common/http-common";
 import Logger from "js-logger";
 
@@ -43,10 +48,11 @@ export default {
     }
   },
 
-  async getDataFromItem(id, params, options) {
+  /*% if (hasMovingSensors && feature.SV_P_SensorInfo) { %*/
+  async getInfoFromItem(id, params, options) {
     try {
       const response = (
-        await HTTP.post(`${RESOURCE_NAME}/${id}/data`, params, options)
+        await HTTP.post(`${RESOURCE_NAME}/${id}/info`, params, options)
       )?.data;
       if (!!response) return response;
       throw new Error("ERR_CANCELED");
@@ -57,6 +63,24 @@ export default {
       throw err;
     }
   },
+  /*% } else { %*/
+    async getDataFromItem (id, params, options) {
+      try {
+        const response = (
+
+          await HTTP.post(`${RESOURCE_NAME}/${id}/data`, params, options)
+
+        )?.data;
+        if (!!response) return response;
+        throw new Error("ERR_CANCELED");
+      } catch (err) {
+        if (err.message != "ERR_CANCELED") {
+          logger.error("Error fetching data for element with id " + id);
+        }
+        throw err;
+      }
+    },
+  /*% } %*/
 
   async getHistogramDataFromItem(id, params, options) {
     try {

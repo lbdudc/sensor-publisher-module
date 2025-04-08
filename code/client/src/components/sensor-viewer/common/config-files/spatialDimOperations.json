@@ -1,0 +1,17 @@
+###<
+const hasMovingSensors = data.dataWarehouse?.sensors?.find(function(sensor) {
+  return sensor.isMoving === true; });
+if (feature.SensorViewer && hasMovingSensors ) { >###
+{
+  "spatial_operation": [
+    {
+      "label": "aggregation.spatial.operation.items.contains",
+      "value": "CONTAINS"
+    },
+    {
+      "label": "aggregation.spatial.operation.items.intersects",
+      "value": "INTERSECTS"
+    }
+  ]
+}
+###< } >###

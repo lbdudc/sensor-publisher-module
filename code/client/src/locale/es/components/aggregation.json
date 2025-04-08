@@ -1,4 +1,7 @@
-###< if (data.basicData.languages.find(lang => lang=='es') && feature.SensorViewer) { >###
+###< if (data.basicData.languages.find(lang => lang=='es') && feature.SensorViewer) {
+  const hasMovingSensors = data.dataWarehouse.sensors?.find(function(sensor) {
+    return sensor.isMoving === true; });
+>###
 {
   "aggregation": {
     "label": "Agregación",
@@ -17,15 +20,28 @@
           "###<= normalize(entity.toLowerCase(), true) >###": "###<= normalize(entity.toLowerCase(), true) >###" ###< if (entities.length > index + 1) { >###,###< } >###
       ###< }); >###
       }
+      ###< if (hasMovingSensors) { >###
+      ,"operation": {
+        "label": "Operación espacial",
+        "items": {
+          "contains":"Contains",
+          "intersects": "Intersects"
+        }
+      }
+      ###< } >###
     },
     "temporal": {
       "items": {
+        "minutely": "Minuto",
         "hourly": "Horaria",
         "daily": "Diaria",
         "monthly": "Mensual",
         "weekly": "Semanal",
         "yearly": "Anual",
         "no_grouping": "Sin agregación"
+        ###< if (hasMovingSensors) { >###
+        ,"range": "Rango"
+        ###< } >###
       }
     },
     "operational": {
